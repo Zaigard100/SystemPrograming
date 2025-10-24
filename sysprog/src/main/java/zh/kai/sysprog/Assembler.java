@@ -153,7 +153,9 @@ public class Assembler {
                         return true;
                     }
                     try{
-                        lc += dirrectiveLenght(currentLine);
+                        int lenght = dirrectiveLenght(currentLine);
+                        currentLine.setLenght(lenght);
+                        lc += lenght;
                     }catch(NumberFormatException e){
                         Errors.addPart1("Не верный формат диррективы: "+ currentLine);
                         return false;
@@ -163,7 +165,9 @@ public class Assembler {
                     return false;
                 }
             }else{
-                lc += currentOperation.getLenght();
+                int lenght = currentOperation.getLenght();
+                currentLine.setLenght(lenght);
+                lc += lenght;
             }
         }
 
