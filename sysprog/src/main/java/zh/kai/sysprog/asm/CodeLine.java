@@ -16,6 +16,8 @@ public class CodeLine {
         this.operationName = operationName;
     }
 
+    //TODO функции проверки правильности длины команды 
+
     public String getLabel() {
         return label;
     }

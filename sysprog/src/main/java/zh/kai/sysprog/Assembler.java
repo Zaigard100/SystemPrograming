@@ -101,6 +101,8 @@ public class Assembler {
         }
     }
 
+
+
     public boolean firstPass(){
         boolean hasError = false;
         CodeLine header = codeLines.get(0);
@@ -169,6 +171,7 @@ public class Assembler {
                 currentLine.setLenght(lenght);
                 lc += lenght;
             }
+            //TODO проверка правильности длины CodeLine
         }
 
         return !hasError;
