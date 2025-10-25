@@ -16,7 +16,7 @@ public class Assembler {
     ArrayList<CodeLine> codeLines;
     HashMap<String, Integer> symTab;
 
-    HashSet<String> dirrectives = new HashSet<>(List.of(
+    public static HashSet<String> dirrectives = new HashSet<>(List.of(
         "start","end",
         "r0","r1","r2","r3","r4","r5","r6","r7",
         "r8","r9","r10","r11","r12","r13","r14","r15",
@@ -157,6 +157,9 @@ public class Assembler {
                     try{
                         int lenght = dirrectiveLenght(currentLine);
                         currentLine.setLenght(lenght);
+                        if(!currentLine.checkLenght()){
+                            hasError = true;
+                        }
                         lc += lenght;
                     }catch(NumberFormatException e){
                         Errors.addPart1("Не верный формат диррективы: "+ currentLine);
@@ -169,9 +172,11 @@ public class Assembler {
             }else{
                 int lenght = currentOperation.getLenght();
                 currentLine.setLenght(lenght);
+                if(!currentLine.checkLenght()){
+                    hasError = true;
+                }
                 lc += lenght;
             }
-            //TODO проверка правильности длины CodeLine
         }
 
         return !hasError;
