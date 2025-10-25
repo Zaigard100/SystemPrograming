@@ -127,8 +127,15 @@ public class CodeLine {
             for(short b:addres){
                 sb.append(String.format("%02x", b));
             }
+            sb.append(" ");
             addres = Utils.intToShortArray4(lenght);
             sb.append(String.format("%02x", addres[3]));
+            sb.append(" ");
+            if(!(operationName.equals("resb") || operationName.equals("resw") )){
+                for(short b:obj){
+                    sb.append(String.format("%02x", b));
+                }
+            }
         }
         return sb.toString();
     }

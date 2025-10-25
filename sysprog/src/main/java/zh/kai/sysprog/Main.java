@@ -35,9 +35,16 @@ public class Main {
     """;
 
     public static void main(String[] args) {
-        //System.out.println("Hello world!");
 
         Assembler asm = new Assembler();
+
+        System.out.println("Исходный текст:");
+        //TODO Вывод реолизовать
+        System.out.println("_______________________");
+
+        System.out.println("Тадлица кодов:");
+        System.out.println("_______________________");
+
         if(asm.firstPass()){
             for(CodeLine cl:asm.codeLines){
                 System.out.println(cl.toAdditionString());

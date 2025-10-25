@@ -312,8 +312,14 @@ public class Assembler {
                             val[0] = code;
                             currentLine.setObj(new short[]{code,val[3]});
                         }
+                    }else{
+                        Errors.addPart2("Некорректный формат агргумента: " + currentLine);
+                        return false;
                     }
                 }
+            }else{
+                Errors.addPart2("Мнемоника операции или дерректива не найдены: "+ currentLine);
+                return false;
             }
         }
         return !hasError;
