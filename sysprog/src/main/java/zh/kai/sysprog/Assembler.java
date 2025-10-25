@@ -9,9 +9,13 @@ import java.util.Scanner;
 import zh.kai.sysprog.asm.CodeLine;
 import zh.kai.sysprog.asm.Errors;
 import zh.kai.sysprog.asm.Operation;
+import zh.kai.sysprog.utils.Utils;
 
 public class Assembler {
 
+    public static final int WORD_LENGHT = 3;
+    public static final int MAX_BYTE = 256;
+    public static final int WORD_MAX = 16_777_216;
     ArrayList<Operation> operationsCodes;
     ArrayList<CodeLine> codeLines;
     HashMap<String, Integer> symTab;
@@ -63,6 +67,10 @@ public class Assembler {
                     Errors.addPart1("Дубликат имени операции: "+ line);
                     continue;
                 }
+                if(c >= 64 && c >= 0){
+                    Errors.addPart1("Диапозон допустимых кодов операций от0 до 64: "+ line);
+                    continue;
+                }
                 if(getOperationByCode(c)!=null){
                     Errors.addPart1("Дубликат кода операции: "+ line);
                     continue;
@@ -101,8 +109,6 @@ public class Assembler {
         }
     }
 
-
-
     public boolean firstPass(){
         boolean hasError = false;
         CodeLine header = codeLines.get(0);
@@ -113,7 +119,12 @@ public class Assembler {
 
         int lc = -1;
         if(header.getArguments()!= null){
-            lc = Integer.parseInt(header.getArguments()); //заполняем начальный адрес LOCCTR
+            try{
+                lc = Integer.parseInt(header.getArguments()); //заполняем начальный адрес LOCCTR
+            }catch(NumberFormatException e){
+                Errors.addPart1("Аргумент дерректива startдолжен быть адрес: "+ header);
+                return false;
+            }
         }else{
             Errors.addPart1("Неопределена точка старта программы");
             hasError = true;
@@ -125,6 +136,12 @@ public class Assembler {
 
         for (int i = 1; i < codeLines.size(); i++) {
             CodeLine currentLine = codeLines.get(i);
+
+            if(!(lc<WORD_MAX)){
+                Errors.addPart1("Выход за границу адресного пространства");
+                return false;
+            }
+
             currentLine.setAddress(lc);
             if(currentLine.getLabel()!=null){
                 if(symTab.containsKey(currentLine.getLabel())){
@@ -152,7 +169,7 @@ public class Assembler {
                         return false;
                     }
                     if(operationName.equals("end")){
-                        return true;
+                        return !hasError;
                     }
                     try{
                         int lenght = dirrectiveLenght(currentLine);
@@ -183,12 +200,135 @@ public class Assembler {
 
     }
 
+    public boolean secondPass(){
+        boolean hasError = false;
+        CodeLine header = codeLines.get(0);
+
+        for (int i = 1; i < codeLines.size(); i++) {
+            CodeLine currentLine = codeLines.get(i);
+            String operationName = currentLine.getOperationName();
+            if(dirrectives.contains(operationName)){
+                if(operationName.equals("end")){
+                    String arguments = currentLine.getArguments();
+                    int headerArg = Integer.parseInt(header.getArguments());
+                    if(arguments != null){
+                        int start;
+                        try{
+                        start = Integer.parseInt(arguments);
+                        if(start >= headerArg && start<= currentLine.getAddress()){
+                            short[] addres = Utils.intToShortArray4(start);
+                            currentLine.setObj(new short[]{addres[1],addres[2],addres[3]});
+                        }else{
+                            Errors.addPart2("Некорректный аргумент end адрес должен находится в диапозоне кода");
+                            hasError = true;
+                        }
+                        }catch(NumberFormatException e){
+                            Errors.addPart2("Некорректный аргумент end ожидается адрес");
+                            return false;
+                        }
+                    }else{
+                        int start = headerArg;
+                        short[] addres = Utils.intToShortArray4(start);
+                        currentLine.setObj(new short[]{addres[1],addres[2],addres[3],});
+                    }
+                    short[] addres = Utils.intToShortArray4(headerArg);
+                    short[] length = Utils.intToShortArray4(currentLine.getAddress() - headerArg);
+                    header.setObj(new short[]{addres[1],addres[2],addres[3],length[1],length[2],length[3]});
+
+                    return !hasError;
+                }
+                if(operationName.equals("resb") || operationName.equals("resw") ){
+                    currentLine.setObj(new short[currentLine.getLenght()]);
+                }
+                if(operationName.equals("word")){
+                    int data = Integer.parseInt(currentLine.getArguments());
+                    short[] obj = Utils.intToShortArray4(data);
+                    currentLine.setObj(new short[]{obj[1],obj[2],obj[3]});
+                }
+                if(operationName.equals("byte")){
+                    String arguments = currentLine.getArguments().trim();
+                    if(arguments.startsWith("C\"") && arguments.endsWith("\"")){
+                        try{
+                            short[] data = Utils.stringToAsciiShortArray(arguments.substring(2, arguments.length()-1));
+                            currentLine.setObj(data);
+                        }catch(Exception e){
+                            if(e.getMessage().equals("noascii")){
+                                Errors.addPart2("Встречен не ASCII символ: " + arguments.substring(2, arguments.length()-1));
+                                hasError = true;
+                            }
+                        }
+                    }else if(arguments.startsWith("X\"") && arguments.endsWith("\"")){
+                        double a = (arguments.length()-3)/2.0;
+                        double c = Math.ceil(a);
+                        String hexString = arguments.substring(2, arguments.length()-1);
+                        if(Utils.isHex(hexString)){
+                            short[] hex = Utils.hexStringToShortArray(hexString);
+                            currentLine.setObj(hex);
+                        }else{
+                            Errors.addPart2("Ожидалось hex: "+ hexString);
+                        }
+                    }else{
+                        int data = Integer.parseInt(currentLine.getArguments());
+                        short[] obj = Utils.intToShortArray4(data);
+                        currentLine.setObj(new short[]{obj[3]});
+                    }
+                }
+            }else if(getOperationByName(operationName)!=null){
+                Operation oper = getOperationByName(operationName);
+                short code = oper.getCode();
+                code *= 4; // сдвиг на 2 влево
+                String arguments = currentLine.getArguments();
+                if(arguments == null){
+                    currentLine.setObj(new short[]{code});
+                }else if(arguments.startsWith(".")){
+                    code += 1;
+                    short[] addr = Utils.intToShortArray4(symTab.get(currentLine.getArguments()));
+                    addr[0] = code;
+                    currentLine.setObj(addr);
+                }else{
+                    String[] split = arguments.split(" ");
+                    if(split.length == 2){
+                        if(split[0].startsWith("r") && split[1].startsWith("r")){
+                            if(dirrectives.contains(split[0]) && dirrectives.contains(split[1])){
+                                short regs = Short.parseShort(split[0].substring(1));
+                                regs = (short) (regs * 16);
+                                regs += Short.parseShort(split[1].substring(1));
+                                currentLine.setObj(new short[]{code,regs});
+                            }else{
+                                Errors.addPart2("Доступны регистры от r0 до r15");
+                            }
+                        }else{
+                            Errors.addPart2("Ожидалося регистр: " + currentLine);
+                            return false;
+                        }
+                    }else if(split.length == 1){
+                        if(currentLine.getLenght()==4){
+                            code += 1;
+                        short[] addr = Utils.intToShortArray4(Integer.parseInt(arguments));
+                        addr[0] = code;
+                        currentLine.setObj(addr);
+                        }else if(currentLine.getLenght() == 2){
+                            short[] val = Utils.intToShortArray4(Integer.parseInt(arguments));
+                            val[0] = code;
+                            currentLine.setObj(new short[]{code,val[3]});
+                        }
+                    }
+                }
+            }
+        }
+        return !hasError;
+    }
+
     private int dirrectiveLenght(CodeLine currentLine) {
         String operationName = currentLine.getOperationName();
         String arguments = currentLine.getArguments().trim();
         switch (operationName) {
             case "word" -> {
-                return 3;
+                if(Integer.parseInt(arguments)<WORD_MAX &&Integer.parseInt(arguments)>=0){
+                    return WORD_LENGHT;
+                }
+                throw new NumberFormatException();
+                
             }
             case "byte" -> {
                 if(arguments.startsWith("C\"") && arguments.endsWith("\"")){
@@ -199,7 +339,7 @@ public class Assembler {
                     double c = Math.ceil(a);
                     return (int) c;
                 }
-                if(Short.parseShort(arguments)<256){
+                if(Short.parseShort(arguments)<MAX_BYTE && Short.parseShort(arguments)>=0){
                     return 1;
                 }else{
                     throw new NumberFormatException();
@@ -209,7 +349,7 @@ public class Assembler {
                 return Integer.parseInt(arguments);
             }
             case "resw" -> {
-                return Integer.parseInt(arguments)*3;
+                return Integer.parseInt(arguments)*WORD_LENGHT;
             }
             default -> {
                 throw new NumberFormatException();

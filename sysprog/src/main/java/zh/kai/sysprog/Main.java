@@ -1,5 +1,6 @@
 package zh.kai.sysprog;
 
+import zh.kai.sysprog.asm.CodeLine;
 import zh.kai.sysprog.asm.Errors;
 
 public class Main {
@@ -11,17 +12,17 @@ public class Main {
         ldar1 .two
         add r1 r2
         star1 .res
-        int 20
+        int 29
         clr
         resb 4
     .data
-    .bighex byte X"0FAF9"
+    .bighex byte X"FAF09"
         resw 5
     .one byte 1
     .two byte 2
     .res word 34
     .hello byte C"Hello"
-        end
+        end 101
     """;
 
     static final String opcod = """
@@ -34,10 +35,18 @@ public class Main {
     """;
 
     public static void main(String[] args) {
-        System.out.println("Hello world!");
+        //System.out.println("Hello world!");
 
         Assembler asm = new Assembler();
-        asm.firstPass();
+        if(asm.firstPass()){
+            for(CodeLine cl:asm.codeLines){
+                System.out.println(cl.toAdditionString());
+            }
+            asm.secondPass();
+        }
+
         System.out.println(Errors.getPart1());
+        System.out.println(Errors.getPart2());
+        System.out.println();
     }
 }
