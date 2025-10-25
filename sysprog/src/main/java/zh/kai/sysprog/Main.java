@@ -45,7 +45,7 @@ public class Main {
                 if(a1 == null){
                     a1 = "";
                 }
-                String a2 = cl.getArguments();
+                String a2 = cl.getOperationName();
                 if(a2 == null){
                     a2 = "";
                 }
