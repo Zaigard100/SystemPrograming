@@ -41,10 +41,22 @@ public class Main {
 
         System.out.println("Исходный текст:");
         for(CodeLine cl:asm.codeLines){
+                String a1 = cl.getLabel();
+                if(a1 == null){
+                    a1 = "";
+                }
+                String a2 = cl.getArguments();
+                if(a2 == null){
+                    a2 = "";
+                }
+                String a3 = cl.getArguments();
+                if(a3 == null){
+                    a3 = "";
+                }
                 System.out.printf( "%-12s %s %s\n",
-                    cl.getLabel(),
-                    cl.getOperationName(),
-                    cl.getArguments()
+                    a1,
+                    a2,
+                    a3
                 );
             }
         System.out.println("_______________________");
