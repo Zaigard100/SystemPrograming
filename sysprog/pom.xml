@@ -7,6 +7,30 @@
     <groupId>zh.kai.sysprog</groupId>
     <artifactId>sysprog</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version> <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>zh.kai.sysprog.Main</mainClass> 
+
+                            <addBuildEnvironmentEntries>true</addBuildEnvironmentEntries> 
+
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix> 
+                        </manifest>
+                        <manifestEntries>
+                            <Implementation-Version>${project.version}</Implementation-Version>
+                            <Built-By>${user.name}</Built-By>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
