@@ -1,0 +1,362 @@
+package zh.kai.sysprog;
+
+import zh.kai.sysprog.asm.CodeLine;
+import zh.kai.sysprog.asm.Errors;
+import zh.kai.sysprog.asm.Operation;
+
+import javax.swing.*;
+import javax.swing.border.TitledBorder;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.Map;
+import java.util.Vector;
+
+public class AssemblerGUI extends JFrame {
+
+    // --- Колонка 1: Исходные данные ---
+    private JTextArea sourceCodeArea;
+    private DefaultTableModel opcodeTableModel;
+    private JTable opcodeTable;
+
+    // --- Колонка 2: Первый проход ---
+    private DefaultTableModel auxTableModel;
+    private DefaultTableModel symTabModel;
+    private JTextArea errorsPass1Area;
+
+    // --- Колонка 3: Второй проход ---
+    private JTextArea objectCodeArea;
+    private JTextArea errorsPass2Area;
+
+    public AssemblerGUI() {
+        setTitle("AssemblerGUI");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setPreferredSize(new Dimension(1200, 700));
+
+        // Основная панель с тремя колонками
+        JPanel mainPanel = new JPanel(new GridLayout(1, 3, 5, 0)); // 1 строка, 3 столбца, 10px горизонтальный отступ
+        
+        mainPanel.add(createColumn1());
+        mainPanel.add(createColumn2());
+        mainPanel.add(createColumn3());
+
+        getContentPane().add(mainPanel, BorderLayout.CENTER);
+        
+        pack();
+        setLocationRelativeTo(null); // Центрирование окна
+    }
+
+    // Создание первой колонки: Исходные данные
+    private JPanel createColumn1() {
+        JPanel panel = new JPanel(new BorderLayout(5, 5));
+        panel.setBorder(new TitledBorder("1. Исходные данные (Редактируемые)"));
+
+        // 1.1. Исходный код (JTextArea)
+        sourceCodeArea = new JTextArea(20, 30);
+        sourceCodeArea.setText(Main.text.trim()); // Заполнение примером
+        JScrollPane sourceCodeScrollPane = new JScrollPane(sourceCodeArea);
+        sourceCodeScrollPane.setBorder(new TitledBorder("Исходный код"));
+        panel.add(sourceCodeScrollPane, BorderLayout.NORTH);
+
+        // 1.2. Таблица кодов opcode (JTable)
+        String[] opcodeColumns = {"Имя", "Код", "Длина"};
+        opcodeTableModel = new DefaultTableModel(opcodeColumns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return true; // Разрешаем редактирование
+            }
+        };
+        opcodeTable = new JTable(opcodeTableModel);
+        
+        // Заполнение примером из Main.opcod
+        parseOpcodeData(Main.opcod);
+
+        JButton addRowButton = new JButton("+КО");
+        JButton removeRowButton = new JButton("-КО");
+        addRowButton.addActionListener(new AddRowListener());
+        removeRowButton.addActionListener(new RemoveRowListener());
+
+        
+
+        JScrollPane opcodeScrollPane = new JScrollPane(opcodeTable);
+        opcodeScrollPane.setBorder(new TitledBorder("Таблица кодов операций (Opcode)"));
+        panel.add(opcodeScrollPane, BorderLayout.CENTER);
+        
+        // 1.3. Кнопки
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        JButton pass1Button = new JButton("Первый проход");
+        JButton pass2Button = new JButton("Второй проход");
+        
+        pass1Button.addActionListener(new Pass1ButtonListener());
+        pass2Button.addActionListener(new Pass2ButtonListener());
+
+        buttonPanel.add(addRowButton);
+        buttonPanel.add(removeRowButton);
+        buttonPanel.add(pass1Button);
+        buttonPanel.add(pass2Button);
+        
+        panel.add(buttonPanel, BorderLayout.SOUTH);
+
+        return panel;
+    }
+
+    // Создание второй колонки: Первый проход
+    private JPanel createColumn2() {
+        JPanel panel = new JPanel(new GridLayout(3, 1, 0, 10));
+        panel.setBorder(new TitledBorder("2. Первый проход"));
+
+        // 2.1. Вспомогательная таблица (JTable)
+        String[] auxColumns = {"Адрес (hex)", "Текст"};
+        auxTableModel = new DefaultTableModel(auxColumns, 0) {
+             @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // Неизменяемая
+            }
+        };
+        JTable auxTable = new JTable(auxTableModel);
+        JScrollPane auxScrollPane = new JScrollPane(auxTable);
+        auxScrollPane.setBorder(new TitledBorder("Вспомогательная таблица"));
+        panel.add(auxScrollPane);
+
+        // 2.2. Таблица символических имен (JTable)
+        String[] symTabColumns = {"Имя", "Адрес (hex)"};
+        symTabModel = new DefaultTableModel(symTabColumns, 0) {
+             @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // Неизменяемая
+            }
+        };
+        JTable symTable = new JTable(symTabModel);
+        JScrollPane symTabScrollPane = new JScrollPane(symTable);
+        symTabScrollPane.setBorder(new TitledBorder("Таблица символических имен"));
+        panel.add(symTabScrollPane);
+
+        // 2.3. Ошибки первого прохода (JTextArea)
+        errorsPass1Area = new JTextArea();
+        errorsPass1Area.setEditable(false);
+        JScrollPane errors1ScrollPane = new JScrollPane(errorsPass1Area);
+        errors1ScrollPane.setBorder(new TitledBorder("Ошибки первого прохода"));
+        panel.add(errors1ScrollPane);
+
+        return panel;
+    }
+
+    // Создание третьей колонки: Второй проход
+    private JPanel createColumn3() {
+        JPanel panel = new JPanel(new GridLayout(2, 1, 0, 10));
+        panel.setBorder(new TitledBorder("3. Второй проход"));
+
+        // 3.1. Объектный код (JTextArea)
+        objectCodeArea = new JTextArea();
+        objectCodeArea.setEditable(false);
+        JScrollPane objCodeScrollPane = new JScrollPane(objectCodeArea);
+        objCodeScrollPane.setBorder(new TitledBorder("Объектный код"));
+        panel.add(objCodeScrollPane);
+
+        // 3.2. Ошибки второго прохода (JTextArea)
+        errorsPass2Area = new JTextArea();
+        errorsPass2Area.setEditable(false);
+        JScrollPane errors2ScrollPane = new JScrollPane(errorsPass2Area);
+        errors2ScrollPane.setBorder(new TitledBorder("Ошибки второго прохода"));
+        panel.add(errors2ScrollPane);
+
+        return panel;
+    }
+
+    // Парсинг начальных данных Opcode (из Main.opcod)
+    private void parseOpcodeData(String opcod) {
+        String[] lines = opcod.trim().split("\n");
+        for (String line : lines) {
+            String[] parts = line.trim().split(" ");
+            if (parts.length == 3) {
+                opcodeTableModel.addRow(new Object[]{parts[0], parts[1], parts[2]});
+            }
+        }
+    }
+
+    // --- Listeners для кнопок управления таблицей Opcode ---
+
+    /**
+     * Добавляет новую пустую строку в таблицу Opcode.
+     * Новая строка будет иметь значения: {"<ИМЯ>", "00", "1"}
+     */
+    private class AddRowListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            opcodeTableModel.addRow(new Object[]{"<ИМЯ>", "00", "1"});
+        }
+    }
+
+    /**
+     * Удаляет выбранную строку из таблицы Opcode.
+     */
+    private class RemoveRowListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            int selectedRow = opcodeTable.getSelectedRow();
+            if (selectedRow != -1) { // Проверяем, что строка выбрана
+                opcodeTableModel.removeRow(selectedRow);
+            } else {
+                JOptionPane.showMessageDialog(AssemblerGUI.this, 
+                    "Выберите строку для удаления.", 
+                    "Ошибка удаления", 
+                    JOptionPane.WARNING_MESSAGE);
+            }
+        }
+    }
+
+    // --- Listeners для кнопок ---
+
+    // Кнопка "Первый проход"
+    private class Pass1ButtonListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            // 1. Сбор данных из GUI
+            String sourceCode = sourceCodeArea.getText();
+            StringBuilder opcodeData = new StringBuilder();
+            for (int i = 0; i < opcodeTableModel.getRowCount(); i++) {
+                // Предполагаем, что данные корректно вводятся пользователем
+                String name = (String) opcodeTableModel.getValueAt(i, 0);
+                String code = (String) opcodeTableModel.getValueAt(i, 1);
+                String length = (String) opcodeTableModel.getValueAt(i, 2);
+                opcodeData.append(name).append(" ").append(code).append(" ").append(length).append("\n");
+            }
+
+            // 2. Очистка предыдущих результатов
+            auxTableModel.setRowCount(0);
+            symTabModel.setRowCount(0);
+            errorsPass1Area.setText("");
+            errorsPass2Area.setText("");
+            objectCodeArea.setText("");
+            // !!! ВНИМАНИЕ: Для корректной работы Errors.java и Assembler.java необходимо добавить 
+            // статическую функцию сброса ошибок в Errors.java (например, Errors.resetAll())
+
+            // 3. Запуск логики Assembler (требуется модификация класса Assembler)
+            // Исходный Assembler использует Main.text и Main.opcod, что не позволит 
+            // использовать данные из GUI.
+
+            // --- Подключение к логике (Необходимо модифицировать Assembler.java) ---
+            try {
+                // ВАЖНО: Предполагается, что в Assembler добавлен конструктор: 
+                // public Assembler(String sourceCode, String opcodeData)
+                
+                // Для демонстрации используем временный класс-заглушку, который 
+                // имитирует работу с вашими классами
+                Assembler assembler = createAssemblerInstance(sourceCode, opcodeData.toString());
+
+                if (assembler.firstPass()) {
+                    // Успех - заполняем таблицы
+                    
+                    // Вспомогательная таблица
+                    for (CodeLine cl : assembler.codeLines) {
+                         auxTableModel.addRow(new Object[]{
+                            String.format("%06X", cl.getAddress()),
+                            cl.toAdditionString().split(" ",2)[1]
+                        });
+                    }
+
+                    // Таблица символических имен
+                    for (Map.Entry<String, Integer> entry : assembler.symTab.entrySet()) {
+                        symTabModel.addRow(new Object[]{
+                            entry.getKey(),
+                            String.format("%06X", entry.getValue())
+                        });
+                    }
+                    
+                    JOptionPane.showMessageDialog(AssemblerGUI.this, "Первый проход завершен успешно.", "Успех", JOptionPane.INFORMATION_MESSAGE);
+
+                } else {
+                    // Ошибка - заполняем область ошибок
+                    errorsPass1Area.setText(Errors.getPart1());
+                    JOptionPane.showMessageDialog(AssemblerGUI.this, "Обнаружены ошибки в первом проходе.", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                }
+
+            } catch (Exception ex) {
+                errorsPass1Area.setText("Критическая ошибка: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+            // ----------------------------------------------------------------------
+        }
+    }
+    
+    // Кнопка "Второй проход"
+    private class Pass2ButtonListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+             // 1. Очистка предыдущих результатов второго прохода
+            errorsPass2Area.setText("");
+            objectCodeArea.setText("");
+            
+            // 2. Сбор данных и запуск Assembler (аналогично первому проходу)
+            String sourceCode = sourceCodeArea.getText();
+            StringBuilder opcodeData = new StringBuilder();
+            for (int i = 0; i < opcodeTableModel.getRowCount(); i++) {
+                String name = (String) opcodeTableModel.getValueAt(i, 0);
+                String code = (String) opcodeTableModel.getValueAt(i, 1);
+                String length = (String) opcodeTableModel.getValueAt(i, 2);
+                opcodeData.append(name).append(" ").append(code).append(" ").append(length).append("\n");
+            }
+            
+            try {
+                // Повторное создание/инициализация для второго прохода
+                Assembler assembler = createAssemblerInstance(sourceCode, opcodeData.toString());
+                assembler.firstPass(); // Должен быть успешным для второго прохода
+                
+                if (assembler.secondPass()) {
+                    // Успех - заполняем объектный код
+                    StringBuilder objCode = new StringBuilder();
+                    for (CodeLine cl : assembler.codeLines) {
+                        objCode.append(cl.toObjString()).append("\n");
+                    }
+                    objectCodeArea.setText(objCode.toString());
+                    JOptionPane.showMessageDialog(AssemblerGUI.this, "Второй проход завершен успешно.", "Успех", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    // Ошибка - заполняем область ошибок
+                    errorsPass2Area.setText(Errors.getPart2());
+                    JOptionPane.showMessageDialog(AssemblerGUI.this, "Обнаружены ошибки во втором проходе.", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (Exception ex) {
+                errorsPass2Area.setText("Критическая ошибка: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        }
+    }
+    
+    /**
+     * ВНИМАНИЕ: Эта функция - ЗАГЛУШКА, которая имитирует создание экземпляра Assembler.
+     * Для реальной работы необходимо:
+     * 1. В Assembler.java добавить публичный конструктор: public Assembler(String text, String opcod)
+     * 2. В Errors.java добавить публичный статический метод: public static void resetErrors()
+     * (который очищает part1 и part2)
+     */
+    private Assembler createAssemblerInstance(String sourceCode, String opcodeData) {
+        // Здесь должны быть изменения в ваших классах для передачи данных
+        // ...
+        // Временно создаем новый Assembler, который не использует статические Main.text/opcod
+        // и использует переданные аргументы.
+        
+        // Для демонстрации, возвращаем экземпляр, как будто он инициализирован
+        // с новыми данными.
+        Errors.setPart1("");;
+        Errors.setPart2("");;
+        
+        // Временно устанавливаем статические поля, чтобы Assembler смог их прочитать 
+        // (это плохое решение, но соответствует структуре ваших файлов).
+        // В реальном проекте, лучше модифицировать Assembler.
+        Main.text = sourceCode;
+        Main.opcod = opcodeData;
+        
+        // Принудительная очистка ошибок для нового прохода
+        Errors.addPart1(""); // Это не очистит, нужно добавить reset в Errors.java
+        
+        return new Assembler(); // Вызовет старые Main.text/opcod если они не обновлены
+    }
+
+    public static void main(String[] args) {
+        // Запуск GUI в потоке диспетчеризации событий
+        SwingUtilities.invokeLater(() -> {
+            new AssemblerGUI().setVisible(true);
+        });
+    }
+}

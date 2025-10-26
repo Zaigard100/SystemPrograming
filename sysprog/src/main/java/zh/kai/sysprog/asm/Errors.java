@@ -4,6 +4,14 @@ public class Errors {
     static private String part1 = "";
     static private String part2 = "";
 
+    public static void setPart1(String a){
+        part1 =a;
+    }
+    
+    public static void setPart2(String a){
+        part2 =a;
+    }
+
     public static void  addPart1(String err){
         part1 += err + "\n";
     }

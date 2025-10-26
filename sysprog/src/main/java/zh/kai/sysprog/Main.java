@@ -1,12 +1,14 @@
 package zh.kai.sysprog;
 
+import javax.swing.SwingUtilities;
+
 import zh.kai.sysprog.asm.CodeLine;
 import zh.kai.sysprog.asm.Errors;
 import zh.kai.sysprog.asm.Operation;
 
 public class Main {
 
-    static final String text = """
+    static String text = """
     .prog start 100
         ldar1 .one
         mov r1 r2
@@ -26,7 +28,7 @@ public class Main {
         end 101
     """;
 
-    static final String opcod = """
+    static String opcod = """
     add 1 2
     ldar1 2 4
     star1 3 4
@@ -36,6 +38,7 @@ public class Main {
     """;
 
     public static void main(String[] args) {
+
 
         Assembler asm = new Assembler();
 
