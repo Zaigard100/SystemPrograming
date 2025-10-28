@@ -1,11 +1,15 @@
 package zh.kai.sysprog;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
 
+import javax.swing.text.Utilities;
+
+import zh.kai.sysprog.asm.Address;
 import zh.kai.sysprog.asm.CodeLine;
 import zh.kai.sysprog.asm.Errors;
 import zh.kai.sysprog.asm.Operation;
@@ -14,11 +18,14 @@ import zh.kai.sysprog.utils.Utils;
 public class Assembler {
 
     public static final int WORD_LENGHT = 3;
+    public static final int REL_LENGHT = 2;
     public static final int MAX_BYTE = 256;
     public static final int WORD_MAX = 16_777_216;
+    public static final int REL_MAX = 65_536;
     ArrayList<Operation> operationsCodes;
     ArrayList<CodeLine> codeLines;
-    HashMap<String, Integer> symTab;
+    ArrayList<Address> relocationTable;
+    HashMap<String, Address> symTab;
 
     public static HashSet<String> dirrectives = new HashSet<>(List.of(
         "start","end",
@@ -33,12 +40,14 @@ public class Assembler {
         parseOperationsCodes(Main.opcod);
         parseCode(Main.text);
         symTab = new HashMap<>();
+        relocationTable = new ArrayList<>();
     }
     
     public Assembler(String code,String operationCode){
         parseOperationsCodes(operationCode);
         parseCode(code);
         symTab = new HashMap<>();
+        relocationTable = new ArrayList<>();
     }
 
     public void parseOperationsCodes(String text){
@@ -56,8 +65,8 @@ public class Assembler {
                 short c = Short.parseShort(split[1]);
                 int lenght = Integer.parseInt(split[2]);
 
-                if(lenght == 3 || lenght > 4){
-                    Errors.addPart1("Неправильная длина команды допускаются только 1,2,4: "+ line);
+                if( lenght > 4){//добавлена длина команды 3 только для относительной адресации
+                    Errors.addPart1("Неправильная длина команды допускаются только до 4: "+ line);
                 }
                 if(dirrectives.contains(name)){
                     Errors.addPart1(name + " зарезервировано: "+ line);
@@ -67,8 +76,8 @@ public class Assembler {
                     Errors.addPart1("Дубликат имени операции: "+ line);
                     continue;
                 }
-                if(c >= 64 && c >= 0){
-                    Errors.addPart1("Диапозон допустимых кодов операций от0 до 64: "+ line);
+                if(c > 64 && c >= 0){
+                    Errors.addPart1("Диапозон допустимых кодов операций от 0 до 63: "+ line);
                     continue;
                 }
                 if(getOperationByCode(c)!=null){
@@ -142,13 +151,13 @@ public class Assembler {
                 return false;
             }
 
-            currentLine.setAddress(lc);
+            currentLine.setAddress(new Address(lc));
             if(currentLine.getLabel()!=null){
                 if(symTab.containsKey(currentLine.getLabel())){
                     Errors.addPart1("Дубликат метки на строке "+i+": "+currentLine);
                     hasError = true;
                 }
-                symTab.put(currentLine.getLabel(), lc);
+                symTab.put(currentLine.getLabel(), new Address(lc));
                 if(currentLine.getOperationName() == null){// проверка на строку метку
                     codeLines.remove(i);// удаление строки метки
                     i--;
@@ -215,7 +224,7 @@ public class Assembler {
                         int start;
                         try{
                         start = Integer.parseInt(arguments);
-                        if(start >= headerArg && start<= currentLine.getAddress()){
+                        if(start >= headerArg && start<= currentLine.getAddress().getAddress()){
                             short[] addres = Utils.intToShortArray4(start);
                             currentLine.setObj(new short[]{addres[1],addres[2],addres[3]});
                         }else{
@@ -232,7 +241,7 @@ public class Assembler {
                         currentLine.setObj(new short[]{addres[1],addres[2],addres[3],});
                     }
                     short[] addres = Utils.intToShortArray4(headerArg);
-                    short[] length = Utils.intToShortArray4(currentLine.getAddress() - headerArg);
+                    short[] length = Utils.intToShortArray4(currentLine.getAddress().getAddress() - headerArg);
                     header.setObj(new short[]{addres[1],addres[2],addres[3],length[1],length[2],length[3]});
 
                     return !hasError;
@@ -273,7 +282,7 @@ public class Assembler {
                         currentLine.setObj(new short[]{obj[3]});
                     }
                 }
-            }else if(getOperationByName(operationName)!=null){
+            }else if(getOperationByName(operationName)!=null){ 
                 Operation oper = getOperationByName(operationName);
                 short code = oper.getCode();
                 code *= 4; // сдвиг на 2 влево
@@ -281,14 +290,26 @@ public class Assembler {
                 if(arguments == null){
                     currentLine.setObj(new short[]{code});
                 }else if(arguments.startsWith(".")){
-                    code += 1;
-                    short[] addr = Utils.intToShortArray4(symTab.get(currentLine.getArguments()));
-                    addr[0] = code;
-                    currentLine.setObj(addr);
+                    if(currentLine.getLenght() == 4){
+                        code += 1;//непосредственная
+                        short[] addr = symTab.get(currentLine.getArguments()).toBytes();
+                        //addr[0] = code;
+                        currentLine.setObj(new short[]{code,addr[0],addr[1],addr[2]});
+                        relocationTable.add(currentLine.getAddress()); //добовляем в таблицу релокации все прямые адресации 
+                    }else if(currentLine.getLenght()==3){
+                        //для относительной адрессации
+                        code += 2; //относиетльная
+                        int nextLineAddress = currentLine.getAddress().getAddress() + currentLine.getLenght();
+                        int labelAddress = symTab.get(currentLine.getArguments()).getAddress();
+                        int relativeAddres = labelAddress - nextLineAddress;
+                        short[] addr = Utils.intToShortArray4(relativeAddres);
+                        currentLine.setObj(new short[]{code,addr[2],addr[3]});
+                    }
                 }else{
                     String[] split = arguments.split(" ");
                     if(split.length == 2){
                         if(split[0].startsWith("r") && split[1].startsWith("r")){
+                            code += 0; //регистровая
                             if(dirrectives.contains(split[0]) && dirrectives.contains(split[1])){
                                 short regs = Short.parseShort(split[0].substring(1));
                                 regs = (short) (regs * 16);
@@ -303,11 +324,21 @@ public class Assembler {
                         }
                     }else if(split.length == 1){
                         if(currentLine.getLenght()==4){
-                            code += 1;
-                        short[] addr = Utils.intToShortArray4(Integer.parseInt(arguments));
-                        addr[0] = code;
-                        currentLine.setObj(addr);
+                            code += 1;//непосредственная
+                            short[] addr = Utils.intToShortArray4(Integer.parseInt(arguments));
+                            addr[0] = code;
+                            relocationTable.add(currentLine.getAddress()); //добовляем в таблицу релокации все прямые адресации 
+                            currentLine.setObj(addr);
+                        }else if (currentLine.getLenght()==3) {
+                            //для относительной адрессации
+                            code += 2;//относительная
+                            int nextLineAddress = currentLine.getAddress().getAddress() + currentLine.getLenght();
+                            int argumentAddress = Integer.parseInt(arguments);
+                            int relativeAddres = argumentAddress - nextLineAddress;
+                            short[] addr = Utils.intToShortArray4(relativeAddres);
+                            currentLine.setObj(new short[]{code,addr[2],addr[3]});
                         }else if(currentLine.getLenght() == 2){
+                            code += 1; //непосредственная
                             short[] val = Utils.intToShortArray4(Integer.parseInt(arguments));
                             val[0] = code;
                             currentLine.setObj(new short[]{code,val[3]});

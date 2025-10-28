@@ -1,7 +1,11 @@
 package zh.kai.sysprog;
 
+import java.util.Comparator;
+import java.util.Map;
+
 import javax.swing.SwingUtilities;
 
+import zh.kai.sysprog.asm.Address;
 import zh.kai.sysprog.asm.CodeLine;
 import zh.kai.sysprog.asm.Errors;
 import zh.kai.sysprog.asm.Operation;
@@ -10,13 +14,15 @@ public class Main {
 
     static String text = """
     .prog start 100
-        ldar1 .one
+    .pstart
+        lda .one
         mov r1 r2
-        ldar1 .two
+        lda .two
         add r1 r2
-        star1 .res
+        sta .res
         int 29
         clr
+        jmpn .pstart
         resb 4
     .data
     .bighex byte X"FAF09"
@@ -30,11 +36,13 @@ public class Main {
 
     static String opcod = """
     add 1 2
-    ldar1 2 4
-    star1 3 4
+    lda 2 4
+    sta 3 4
     int 4 2
     clr 5 1
     mov 6 2
+    jmp 7 4
+    jmpn 8 3
     """;
 
     public static void main(String[] args) {
@@ -84,15 +92,27 @@ public class Main {
             System.out.println("_______________________");
             
             System.out.println("Таблица символических имен:");
-            for(String cl:asm.symTab.keySet()){
-                System.out.printf("%-12s %06X\n",
-                    cl, asm.symTab.get(cl)
-                );
-            }
+            asm.symTab.entrySet().stream()
+                // 1. Сортируем по адресу (значению в Map.Entry)
+                .sorted(Map.Entry.comparingByValue(
+                    Comparator.comparing(s -> s.getAddress())
+                ))
+                // 2. Выводим результат в нужном формате
+                .forEach(entry -> 
+                    System.out.printf("%-12s %06X\n",
+                        entry.getKey(), entry.getValue().getAddress()
+                    )
+            );
             System.out.println("_______________________");
 
             System.out.println("\tВторой проход:");
             if(asm.secondPass()){
+
+                System.out.println("Таблица перемещений:");
+                for(Address adr:asm.relocationTable){
+                    System.out.printf("%06X\n",adr.getAddress());
+                }
+                System.out.println("_______________________");
                 System.out.println("Обьектный код:");
                 for(CodeLine cl:asm.codeLines){
                     System.out.println(cl.toObjString());

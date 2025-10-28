@@ -9,7 +9,7 @@ public class CodeLine {
     private String operationName;
     private String arguments;
 
-    private int address;
+    private Address address;
     private int lenght;
     private short [] obj;
 
@@ -35,13 +35,22 @@ public class CodeLine {
 
             for (String a : args) {
                 if(a.startsWith(".")){
-                    len+=Assembler.WORD_LENGHT;
+                    if(lenght==4){
+                        len+=Assembler.WORD_LENGHT;
+                    }else if(lenght == 3){
+                        len+=Assembler.REL_LENGHT;
+                    }
                 }else if(a.startsWith("r")){
                     len += 0.5;
                 }else if(Utils.isIntegerRegex(a)){
                     if(Integer.parseInt(a)>=0){
                         if(lenght == 2){
                             if(Integer.parseInt(a)<Assembler.MAX_BYTE){
+                                return true;
+                            }
+                        }
+                        if(lenght == 3){
+                            if(Integer.parseInt(a)<Assembler.REL_MAX){
                                 return true;
                             }
                         }
@@ -102,7 +111,10 @@ public class CodeLine {
         StringBuilder sb = new StringBuilder();
         if(operationName!=null) sb.append(operationName).append(" ");
         if(arguments!=null) sb.append(arguments).append(" ");
-        return String.format("%06X %s", address,sb.toString());
+        if(address == null){
+            return String.format(sb.toString());
+        }
+        return String.format("%06X %s", address.getAddress(),sb.toString());
     }
 
     public String toObjString(){
@@ -122,14 +134,13 @@ public class CodeLine {
             }
         }else{
             sb.append("T ");
-            short[] addres = Utils.intToShortArray4(address);
-            addres = new short[]{addres[1],addres[2],addres[3]};
-            for(short b:addres){
+            short[] addr = address.toBytes();
+            for(short b:addr){
                 sb.append(String.format("%02x", b));
             }
             sb.append(" ");
-            addres = Utils.intToShortArray4(lenght);
-            sb.append(String.format("%02x", addres[3]));
+            addr = Utils.intToShortArray4(lenght);
+            sb.append(String.format("%02x", addr[3]));
             sb.append(" ");
             if(!(operationName.equals("resb") || operationName.equals("resw") )){
                 for(short b:obj){
@@ -140,11 +151,11 @@ public class CodeLine {
         return sb.toString();
     }
 
-    public int getAddress() {
+    public Address getAddress() {
         return address;
     }
 
-    public void setAddress(int address) {
+    public void setAddress(Address address) {
         this.address = address;
     }
 

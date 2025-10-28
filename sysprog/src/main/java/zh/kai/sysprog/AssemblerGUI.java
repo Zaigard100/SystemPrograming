@@ -1,5 +1,6 @@
 package zh.kai.sysprog;
 
+import zh.kai.sysprog.asm.Address;
 import zh.kai.sysprog.asm.CodeLine;
 import zh.kai.sysprog.asm.Errors;
 import zh.kai.sysprog.asm.Operation;
@@ -10,6 +11,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Vector;
 
@@ -26,6 +28,7 @@ public class AssemblerGUI extends JFrame {
     private JTextArea errorsPass1Area;
 
     // --- Колонка 3: Второй проход ---
+    private DefaultTableModel relTabModel;
     private JTextArea objectCodeArea;
     private JTextArea errorsPass2Area;
 
@@ -144,8 +147,21 @@ public class AssemblerGUI extends JFrame {
 
     // Создание третьей колонки: Второй проход
     private JPanel createColumn3() {
-        JPanel panel = new JPanel(new GridLayout(2, 1, 0, 10));
+        JPanel panel = new JPanel(new GridLayout(3, 1, 0, 10));
         panel.setBorder(new TitledBorder("3. Второй проход"));
+
+        // 2.2. Таблица символических имен (JTable)
+        String[] relTabColumns = {"Адрес (hex)"};
+        relTabModel = new DefaultTableModel(relTabColumns, 0) {
+             @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // Неизменяемая
+            }
+        };
+        JTable relTable = new JTable(relTabModel);
+        JScrollPane symTabScrollPane = new JScrollPane(relTable);
+        symTabScrollPane.setBorder(new TitledBorder("Таблица перемещений"));
+        panel.add(symTabScrollPane);
 
         // 3.1. Объектный код (JTextArea)
         objectCodeArea = new JTextArea();
@@ -226,23 +242,14 @@ public class AssemblerGUI extends JFrame {
             // 2. Очистка предыдущих результатов
             auxTableModel.setRowCount(0);
             symTabModel.setRowCount(0);
+            relTabModel.setRowCount(0);
             errorsPass1Area.setText("");
             errorsPass2Area.setText("");
             objectCodeArea.setText("");
-            // !!! ВНИМАНИЕ: Для корректной работы Errors.java и Assembler.java необходимо добавить 
-            // статическую функцию сброса ошибок в Errors.java (например, Errors.resetAll())
-
-            // 3. Запуск логики Assembler (требуется модификация класса Assembler)
-            // Исходный Assembler использует Main.text и Main.opcod, что не позволит 
-            // использовать данные из GUI.
 
             // --- Подключение к логике (Необходимо модифицировать Assembler.java) ---
             try {
-                // ВАЖНО: Предполагается, что в Assembler добавлен конструктор: 
-                // public Assembler(String sourceCode, String opcodeData)
                 
-                // Для демонстрации используем временный класс-заглушку, который 
-                // имитирует работу с вашими классами
                 Assembler assembler = createAssemblerInstance(sourceCode, opcodeData.toString());
 
                 if (assembler.firstPass()) {
@@ -250,19 +257,33 @@ public class AssemblerGUI extends JFrame {
                     
                     // Вспомогательная таблица
                     for (CodeLine cl : assembler.codeLines) {
-                         auxTableModel.addRow(new Object[]{
-                            String.format("%06X", cl.getAddress()),
-                            cl.toAdditionString().split(" ",2)[1]
-                        });
+                        if("start".equals(cl.getOperationName())){
+                            auxTableModel.addRow(new Object[]{
+                                String.format("%s", cl.getLabel()),
+                                cl.toAdditionString()
+                            });
+                        }else{
+                            auxTableModel.addRow(new Object[]{
+                                String.format("%06X", cl.getAddress().getAddress()),
+                                cl.toAdditionString().split(" ",2)[1]
+                            });
+                        }
                     }
 
-                    // Таблица символических имен
-                    for (Map.Entry<String, Integer> entry : assembler.symTab.entrySet()) {
+                    assembler.symTab.entrySet().stream()
+                    // 1. Сортируем по адресу.
+                    // Map.Entry.comparingByValue() позволяет сравнивать по значению (Address).
+                    // Comparator.comparing(Address::getAddress) указывает, что нужно сравнивать результат Address.getAddress().
+                    .sorted(Map.Entry.comparingByValue(
+                        Comparator.comparing(Address::getAddress)
+                    ))
+                    // 2. Добавляем отсортированные элементы в модель.
+                    .forEach(entry -> {
                         symTabModel.addRow(new Object[]{
                             entry.getKey(),
-                            String.format("%06X", entry.getValue())
+                            String.format("%06X", entry.getValue().getAddress())
                         });
-                    }
+                    });
                     
                     JOptionPane.showMessageDialog(AssemblerGUI.this, "Первый проход завершен успешно.", "Успех", JOptionPane.INFORMATION_MESSAGE);
 
@@ -285,6 +306,7 @@ public class AssemblerGUI extends JFrame {
         @Override
         public void actionPerformed(ActionEvent e) {
              // 1. Очистка предыдущих результатов второго прохода
+            relTabModel.setRowCount(0);
             errorsPass2Area.setText("");
             objectCodeArea.setText("");
             
@@ -305,6 +327,13 @@ public class AssemblerGUI extends JFrame {
                 
                 if (assembler.secondPass()) {
                     // Успех - заполняем объектный код
+                    assembler.relocationTable.stream()
+                    .forEach(entry -> {
+                        relTabModel.addRow(new Object[]{
+                            String.format("%06X", entry.getAddress())
+                        });
+                    });
+
                     StringBuilder objCode = new StringBuilder();
                     for (CodeLine cl : assembler.codeLines) {
                         objCode.append(cl.toObjString()).append("\n");
@@ -323,27 +352,11 @@ public class AssemblerGUI extends JFrame {
         }
     }
     
-    /**
-     * ВНИМАНИЕ: Эта функция - ЗАГЛУШКА, которая имитирует создание экземпляра Assembler.
-     * Для реальной работы необходимо:
-     * 1. В Assembler.java добавить публичный конструктор: public Assembler(String text, String opcod)
-     * 2. В Errors.java добавить публичный статический метод: public static void resetErrors()
-     * (который очищает part1 и part2)
-     */
+    
     private Assembler createAssemblerInstance(String sourceCode, String opcodeData) {
-        // Здесь должны быть изменения в ваших классах для передачи данных
-        // ...
-        // Временно создаем новый Assembler, который не использует статические Main.text/opcod
-        // и использует переданные аргументы.
         
-        // Для демонстрации, возвращаем экземпляр, как будто он инициализирован
-        // с новыми данными.
-        Errors.setPart1("");;
-        Errors.setPart2("");;
-        
-        // Временно устанавливаем статические поля, чтобы Assembler смог их прочитать 
-        // (это плохое решение, но соответствует структуре ваших файлов).
-        // В реальном проекте, лучше модифицировать Assembler.
+        Errors.setPart1("");
+        Errors.setPart2("");
         Main.text = sourceCode;
         Main.opcod = opcodeData;
         
