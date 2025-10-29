@@ -296,14 +296,15 @@ public class Assembler {
                                 currentLine.setObj(new short[]{code,regs});
                             }else{
                                 Errors.addPart2("Доступны регистры от r0 до r15");
+                                return false;
                             }
                         }else{
-                            Errors.addPart2("Ожидалося регистр: " + currentLine);
+                            Errors.addPart2("Ожидался регистр: " + currentLine);
                             return false;
                         }
                     }else if(split.length == 1){
-                        if(currentLine.getLenght()==4){
                             code += 1;
+                        if(currentLine.getLenght()==4){
                         short[] addr = Utils.intToShortArray4(Integer.parseInt(arguments));
                         addr[0] = code;
                         currentLine.setObj(addr);

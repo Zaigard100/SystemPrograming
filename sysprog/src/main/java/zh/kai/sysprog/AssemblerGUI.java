@@ -1,17 +1,26 @@
 package zh.kai.sysprog;
 
-import zh.kai.sysprog.asm.CodeLine;
-import zh.kai.sysprog.asm.Errors;
-import zh.kai.sysprog.asm.Operation;
-
-import javax.swing.*;
-import javax.swing.border.TitledBorder;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Map;
-import java.util.Vector;
+
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.SwingUtilities;
+import javax.swing.border.TitledBorder;
+import javax.swing.table.DefaultTableModel;
+
+import zh.kai.sysprog.asm.CodeLine;
+import zh.kai.sysprog.asm.Errors;
 
 public class AssemblerGUI extends JFrame {
 
@@ -32,7 +41,7 @@ public class AssemblerGUI extends JFrame {
     public AssemblerGUI() {
         setTitle("AssemblerGUI");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setPreferredSize(new Dimension(1200, 700));
+        setPreferredSize(new Dimension(1700, 700));
 
         // Основная панель с тремя колонками
         JPanel mainPanel = new JPanel(new GridLayout(1, 3, 5, 0)); // 1 строка, 3 столбца, 10px горизонтальный отступ
@@ -42,7 +51,7 @@ public class AssemblerGUI extends JFrame {
         mainPanel.add(createColumn3());
 
         getContentPane().add(mainPanel, BorderLayout.CENTER);
-        
+        setResizable(false);
         pack();
         setLocationRelativeTo(null); // Центрирование окна
     }
