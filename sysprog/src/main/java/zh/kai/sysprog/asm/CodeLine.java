@@ -21,6 +21,11 @@ public class CodeLine {
 
     public boolean checkLenght(){
 
+        if (lenght>= Assembler.MAX_BYTE) {
+            Errors.addPart1("Длина команды не может быть больше 255");
+            return false;
+        }
+
         float len = 1;
 
         if(arguments!=null){
@@ -112,7 +117,7 @@ public class CodeLine {
             int i = 0;
             for(short b:obj){
                 sb.append(String.format("%02x", b));
-                if(i==3) sb.append(" ");
+                if(i==2) sb.append(" ");
                 i++;
             }
         }else if(operationName.equals("end")){

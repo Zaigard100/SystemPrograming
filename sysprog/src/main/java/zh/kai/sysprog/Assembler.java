@@ -105,12 +105,16 @@ public class Assembler {
                        case 1 -> codeLines.add(new CodeLine(null, split[0], null)); //без аргументов
                    }
                }
+               if("end".equals(codeLines.getLast().getOperationName())){
+                    return;
+               }
             }
         }
     }
 
     public boolean firstPass(){
         boolean hasError = false;
+        boolean hasEnd = false;
         CodeLine header = codeLines.get(0);
         if(!header.getOperationName().equals("start")){
             Errors.addPart1("Первой строкой ожидается дерректива start, было встречено: "+ header);
@@ -122,7 +126,7 @@ public class Assembler {
             try{
                 lc = Integer.parseInt(header.getArguments()); //заполняем начальный адрес LOCCTR
             }catch(NumberFormatException e){
-                Errors.addPart1("Аргумент дерректива startдолжен быть адрес: "+ header);
+                Errors.addPart1("Аргумент дерректива start должен быть адрес: "+ header);
                 return false;
             }
         }else{
@@ -144,7 +148,7 @@ public class Assembler {
 
             currentLine.setAddress(lc);
             if(currentLine.getLabel()!=null){
-                if(symTab.containsKey(currentLine.getLabel())){
+                if(symTab.containsKey(currentLine.getLabel()) || currentLine.getLabel().equals(header.getLabel())){
                     Errors.addPart1("Дубликат метки на строке "+i+": "+currentLine);
                     hasError = true;
                 }
@@ -169,10 +173,14 @@ public class Assembler {
                         return false;
                     }
                     if(operationName.equals("end")){
+                        hasEnd = true;
                         return !hasError;
                     }
                     try{
                         int lenght = dirrectiveLenght(currentLine);
+                        if(lenght == -1){
+                            return false;
+                        }
                         currentLine.setLenght(lenght);
                         if(!currentLine.checkLenght()){
                             hasError = true;
@@ -194,6 +202,11 @@ public class Assembler {
                 }
                 lc += lenght;
             }
+        }
+
+        if(!hasEnd){
+            Errors.addPart1("Ожидался end");
+            return false;
         }
 
         return !hasError;
@@ -282,6 +295,10 @@ public class Assembler {
                     currentLine.setObj(new short[]{code});
                 }else if(arguments.startsWith(".")){
                     code += 1;
+                    if (!symTab.containsKey(currentLine.getArguments())) {
+                        Errors.addPart2("Метка "+ currentLine.getArguments() + " не существует");
+                        return false;
+                    }
                     short[] addr = Utils.intToShortArray4(symTab.get(currentLine.getArguments()));
                     addr[0] = code;
                     currentLine.setObj(addr);
@@ -353,15 +370,24 @@ public class Assembler {
                 }
             }
             case "resb" -> {
-                return Integer.parseInt(arguments);
+                try{
+                    return Integer.parseInt(arguments);
+                }catch(NumberFormatException e){
+                    Errors.addPart1("Ошибка формата числа");
+                }
             }
             case "resw" -> {
-                return Integer.parseInt(arguments)*WORD_LENGHT;
+                try{
+                    return Integer.parseInt(arguments)*WORD_LENGHT;
+                }catch(NumberFormatException e){
+                    Errors.addPart1("Ошибка формата числа");
+                }
             }
             default -> {
-                throw new NumberFormatException();
+                throw new RuntimeException("nodef");
             }
         }
+        return -1;
     }
 
     public Operation getOperationByName(String oper){

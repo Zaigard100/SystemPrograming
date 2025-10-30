@@ -51,7 +51,7 @@ public class AssemblerGUI extends JFrame {
         mainPanel.add(createColumn3());
 
         getContentPane().add(mainPanel, BorderLayout.CENTER);
-        setResizable(false);
+        //setResizable(false);
         pack();
         setLocationRelativeTo(null); // Центрирование окна
     }
@@ -310,8 +310,7 @@ public class AssemblerGUI extends JFrame {
             try {
                 // Повторное создание/инициализация для второго прохода
                 Assembler assembler = createAssemblerInstance(sourceCode, opcodeData.toString());
-                assembler.firstPass(); // Должен быть успешным для второго прохода
-                
+                if(assembler.firstPass()){ // Должен быть успешным для второго прохода
                 if (assembler.secondPass()) {
                     // Успех - заполняем объектный код
                     StringBuilder objCode = new StringBuilder();
@@ -325,6 +324,10 @@ public class AssemblerGUI extends JFrame {
                     errorsPass2Area.setText(Errors.getPart2());
                     JOptionPane.showMessageDialog(AssemblerGUI.this, "Обнаружены ошибки во втором проходе.", "Ошибка", JOptionPane.ERROR_MESSAGE);
                 }
+            }else{
+                JOptionPane.showMessageDialog(AssemblerGUI.this, "Первый проход завершен с ошибками", "Ошибка", JOptionPane.ERROR_MESSAGE);
+
+            }
             } catch (Exception ex) {
                 errorsPass2Area.setText("Критическая ошибка: " + ex.getMessage());
                 ex.printStackTrace();
