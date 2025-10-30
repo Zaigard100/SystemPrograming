@@ -8,6 +8,7 @@ import zh.kai.sysprog.asm.Operation;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -15,9 +16,12 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Vector;
 
+import javax.swing.border.Border;
+
 public class AssemblerGUI extends JFrame {
 
     // --- Колонка 1: Исходные данные ---
+    private JComboBox<String> type;
     private JTextArea sourceCodeArea;
     private DefaultTableModel opcodeTableModel;
     private JTable opcodeTable;
@@ -35,7 +39,7 @@ public class AssemblerGUI extends JFrame {
     public AssemblerGUI() {
         setTitle("AssemblerGUI");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setPreferredSize(new Dimension(1200, 700));
+        setPreferredSize(new Dimension(1250, 750));
 
         // Основная панель с тремя колонками
         JPanel mainPanel = new JPanel(new GridLayout(1, 3, 5, 0)); // 1 строка, 3 столбца, 10px горизонтальный отступ
@@ -52,6 +56,7 @@ public class AssemblerGUI extends JFrame {
 
     // Создание первой колонки: Исходные данные
     private JPanel createColumn1() {
+        JPanel up_panel = new JPanel();
         JPanel panel = new JPanel(new BorderLayout(5, 5));
         panel.setBorder(new TitledBorder("1. Исходные данные (Редактируемые)"));
 
@@ -84,6 +89,7 @@ public class AssemblerGUI extends JFrame {
 
         JScrollPane opcodeScrollPane = new JScrollPane(opcodeTable);
         opcodeScrollPane.setBorder(new TitledBorder("Таблица кодов операций (Opcode)"));
+        opcodeScrollPane.setPreferredSize(new Dimension(350, 200));
         panel.add(opcodeScrollPane, BorderLayout.CENTER);
         
         // 1.3. Кнопки
@@ -99,9 +105,18 @@ public class AssemblerGUI extends JFrame {
         buttonPanel.add(pass1Button);
         buttonPanel.add(pass2Button);
         
-        panel.add(buttonPanel, BorderLayout.SOUTH);
+        //panel.add(buttonPanel, BorderLayout.SOUTH);
 
-        return panel;
+        DefaultComboBoxModel<String> typeBoxModel = new DefaultComboBoxModel<String>();
+        typeBoxModel.addElement("Прямая");
+        typeBoxModel.addElement("Относительная");
+        typeBoxModel.addElement("Смешанная");
+        type = new JComboBox<String>(typeBoxModel);
+
+        up_panel.add(type,BorderLayout.NORTH);
+        up_panel.add(panel,BorderLayout.CENTER);
+        up_panel.add(buttonPanel,BorderLayout.SOUTH);
+        return up_panel;
     }
 
     // Создание второй колонки: Первый проход
@@ -251,12 +266,12 @@ public class AssemblerGUI extends JFrame {
             try {
                 
                 Assembler assembler = createAssemblerInstance(sourceCode, opcodeData.toString());
-
+                assembler.init();
                 if (assembler.firstPass()) {
                     // Успех - заполняем таблицы
                     
                     // Вспомогательная таблица
-                    for (CodeLine cl : assembler.codeLines) {
+                    for (CodeLine cl : assembler.getCodeLines()) {
                         if("start".equals(cl.getOperationName())){
                             auxTableModel.addRow(new Object[]{
                                 String.format("%s", cl.getLabel()),
@@ -270,7 +285,7 @@ public class AssemblerGUI extends JFrame {
                         }
                     }
 
-                    assembler.symTab.entrySet().stream()
+                    assembler.getSymTab().entrySet().stream()
                     // 1. Сортируем по адресу.
                     // Map.Entry.comparingByValue() позволяет сравнивать по значению (Address).
                     // Comparator.comparing(Address::getAddress) указывает, что нужно сравнивать результат Address.getAddress().
@@ -323,11 +338,12 @@ public class AssemblerGUI extends JFrame {
             try {
                 // Повторное создание/инициализация для второго прохода
                 Assembler assembler = createAssemblerInstance(sourceCode, opcodeData.toString());
-                assembler.firstPass(); // Должен быть успешным для второго прохода
+                assembler.init();
+                if(assembler.firstPass()){ // Должен быть успешным для второго прохода
                 
                 if (assembler.secondPass()) {
                     // Успех - заполняем объектный код
-                    assembler.relocationTable.stream()
+                    assembler.getRelocationTable().stream()
                     .forEach(entry -> {
                         relTabModel.addRow(new Object[]{
                             String.format("%06X", entry.getAddress())
@@ -335,7 +351,7 @@ public class AssemblerGUI extends JFrame {
                     });
 
                     StringBuilder objCode = new StringBuilder();
-                    for (CodeLine cl : assembler.codeLines) {
+                    for (CodeLine cl : assembler.getCodeLines()) {
                         objCode.append(cl.toObjString()).append("\n");
                     }
                     objectCodeArea.setText(objCode.toString());
@@ -345,6 +361,10 @@ public class AssemblerGUI extends JFrame {
                     errorsPass2Area.setText(Errors.getPart2());
                     JOptionPane.showMessageDialog(AssemblerGUI.this, "Обнаружены ошибки во втором проходе.", "Ошибка", JOptionPane.ERROR_MESSAGE);
                 }
+            }else{
+                JOptionPane.showMessageDialog(AssemblerGUI.this, "Первый проход завершен с ошибками.", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                
+            }
             } catch (Exception ex) {
                 errorsPass2Area.setText("Критическая ошибка: " + ex.getMessage());
                 ex.printStackTrace();
@@ -363,7 +383,9 @@ public class AssemblerGUI extends JFrame {
         // Принудительная очистка ошибок для нового прохода
         Errors.addPart1(""); // Это не очистит, нужно добавить reset в Errors.java
         
-        return new Assembler(); // Вызовет старые Main.text/opcod если они не обновлены
+        type.addNotify();
+
+        return new Assembler(Assembler.AdderssationType.CHAINED); // Вызовет старые Main.text/opcod если они не обновлены
     }
 
     public static void main(String[] args) {

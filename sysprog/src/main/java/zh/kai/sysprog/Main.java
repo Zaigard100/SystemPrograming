@@ -48,10 +48,10 @@ public class Main {
     public static void main(String[] args) {
 
 
-        Assembler asm = new Assembler();
-
+        Assembler asm = new Assembler(Assembler.AdderssationType.CHAINED);
+        asm.init();
         System.out.println("Исходный текст:");
-        for(CodeLine cl:asm.codeLines){
+        for(CodeLine cl:asm.getCodeLines()){
                 String a1 = cl.getLabel();
                 if(a1 == null){
                     a1 = "";
@@ -73,7 +73,7 @@ public class Main {
         System.out.println("_______________________");
 
         System.out.println("Таблица кодов:");
-        for(Operation cl:asm.operationsCodes){
+        for(Operation cl:asm.getOperationCodes()){
                 System.out.printf( "%-8s %s %s\n",
                     cl.getName(),
                     cl.getCode(),
@@ -86,13 +86,13 @@ public class Main {
 
         if(asm.firstPass()){
             System.out.println("Вспомогательная таблица:");
-            for(CodeLine cl:asm.codeLines){
+            for(CodeLine cl:asm.getCodeLines()){
                 System.out.println(cl.toAdditionString());
             }
             System.out.println("_______________________");
             
             System.out.println("Таблица символических имен:");
-            asm.symTab.entrySet().stream()
+            asm.getSymTab().entrySet().stream()
                 // 1. Сортируем по адресу (значению в Map.Entry)
                 .sorted(Map.Entry.comparingByValue(
                     Comparator.comparing(s -> s.getAddress())
@@ -109,12 +109,12 @@ public class Main {
             if(asm.secondPass()){
 
                 System.out.println("Таблица перемещений:");
-                for(Address adr:asm.relocationTable){
+                for(Address adr:asm.getRelocationTable()){
                     System.out.printf("%06X\n",adr.getAddress());
                 }
                 System.out.println("_______________________");
                 System.out.println("Обьектный код:");
-                for(CodeLine cl:asm.codeLines){
+                for(CodeLine cl:asm.getCodeLines()){
                     System.out.println(cl.toObjString());
                 }
                 System.out.println("_______________________");

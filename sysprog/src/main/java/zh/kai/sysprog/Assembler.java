@@ -17,15 +17,24 @@ import zh.kai.sysprog.utils.Utils;
 
 public class Assembler {
 
+    public enum AdderssationType{
+        DIRECT, //прямая
+        RELATIVE, //относительная
+        CHAINED //смешанная
+    }
+
     public static final int WORD_LENGHT = 3;
     public static final int REL_LENGHT = 2;
     public static final int MAX_BYTE = 256;
     public static final int WORD_MAX = 16_777_216;
     public static final int REL_MAX = 65_536;
-    ArrayList<Operation> operationsCodes;
-    ArrayList<CodeLine> codeLines;
-    ArrayList<Address> relocationTable;
-    HashMap<String, Address> symTab;
+    private ArrayList<Operation> operationsCodes;
+    private ArrayList<CodeLine> codeLines;
+    private ArrayList<Address> relocationTable;
+    private HashMap<String, Address> symTab;
+
+    private AdderssationType type;
+    
 
     public static HashSet<String> dirrectives = new HashSet<>(List.of(
         "start","end",
@@ -36,14 +45,15 @@ public class Assembler {
 
 
     
-    public Assembler(){
-        parseOperationsCodes(Main.opcod);
-        parseCode(Main.text);
-        symTab = new HashMap<>();
-        relocationTable = new ArrayList<>();
+    public Assembler(AdderssationType type){
+        this.type = type;
     }
     
-    public Assembler(String code,String operationCode){
+    public void init(){
+        init(Main.text,Main.opcod);
+    }
+
+    public void init(String code,String operationCode){
         parseOperationsCodes(operationCode);
         parseCode(code);
         symTab = new HashMap<>();
@@ -65,7 +75,7 @@ public class Assembler {
                 short c = Short.parseShort(split[1]);
                 int lenght = Integer.parseInt(split[2]);
 
-                if( lenght > 4){//добавлена длина команды 3 только для относительной адресации
+                if(lenght == 3 || lenght > 4){//добавлена длина команды 3 только для относительной адресации
                     Errors.addPart1("Неправильная длина команды допускаются только до 4: "+ line);
                 }
                 if(dirrectives.contains(name)){
@@ -113,6 +123,9 @@ public class Assembler {
                        case 2 -> codeLines.add(new CodeLine(null, split[0],split[1]));
                        case 1 -> codeLines.add(new CodeLine(null, split[0], null)); //без аргументов
                    }
+               }
+               if("end".equals(codeLines.getLast().getOperationName())){
+                return;
                }
             }
         }
@@ -181,7 +194,13 @@ public class Assembler {
                         return !hasError;
                     }
                     try{
-                        int lenght = dirrectiveLenght(currentLine);
+                        int lenght;
+                        try{
+                            lenght = dirrectiveLenght(currentLine);
+                        }catch(NumberFormatException e){
+                            Errors.addPart1("Ошибка формата числа");
+                            return false;
+                        }
                         currentLine.setLenght(lenght);
                         if(!currentLine.checkLenght()){
                             hasError = true;
@@ -204,7 +223,10 @@ public class Assembler {
                 lc += lenght;
             }
         }
-
+        if(!codeLines.getLast().getOperationName().equals("end")){
+            Errors.addPart1("Ожидается end");
+            return false;
+        }
         return !hasError;
 
     }
@@ -389,7 +411,7 @@ public class Assembler {
                 return Integer.parseInt(arguments)*WORD_LENGHT;
             }
             default -> {
-                throw new NumberFormatException();
+                throw new RuntimeException("nodef");
             }
         }
     }
@@ -408,6 +430,30 @@ public class Assembler {
             if(code == op.getCode()) return op;
         }
         return null;
+    }
+
+    public ArrayList<Address> getRelocationTable() {
+        return relocationTable;
+    }
+
+    public void setRelocationTable(ArrayList<Address> relocationTable) {
+        this.relocationTable = relocationTable;
+    }
+
+    public HashMap<String, Address> getSymTab() {
+        return symTab;
+    }
+
+    public void setSymTab(HashMap<String, Address> symTab) {
+        this.symTab = symTab;
+    }
+
+    public ArrayList<CodeLine> getCodeLines() {
+        return codeLines;
+    }
+
+    public ArrayList<Operation> getOperationCodes() {
+        return operationsCodes;
     }
 
 }
