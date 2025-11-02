@@ -315,8 +315,6 @@ public class Assembler {
                             }
                         }
                     }else if(arguments.startsWith("X\"") && arguments.endsWith("\"")){
-                        double a = (arguments.length()-3)/2.0;
-                        double c = Math.ceil(a);
                         String hexString = arguments.substring(2, arguments.length()-1);
                         if(Utils.isHex(hexString)){
                             short[] hex = Utils.hexStringToShortArray(hexString);
@@ -355,45 +353,55 @@ public class Assembler {
                     }
                 }else{
                     String[] split = arguments.split(" ");
-                    if(split.length == 2){
-                        if(split[0].startsWith("r") && split[1].startsWith("r")){
-                            code += 0; //регистровая
-                            if(dirrectives.contains(split[0]) && dirrectives.contains(split[1])){
-                                short regs = Short.parseShort(split[0].substring(1));
-                                regs = (short) (regs * 16);
-                                regs += Short.parseShort(split[1].substring(1));
-                                currentLine.setObj(new short[]{code,regs});
+                    switch (split.length) {
+                        case 2 -> {
+                            if(split[0].startsWith("r") && split[1].startsWith("r")){
+                                code += 0; //регистровая
+                                if(dirrectives.contains(split[0]) && dirrectives.contains(split[1])){
+                                    short regs = Short.parseShort(split[0].substring(1));
+                                    regs = (short) (regs * 16);
+                                    regs += Short.parseShort(split[1].substring(1));
+                                    currentLine.setObj(new short[]{code,regs});
+                                }else{
+                                    Errors.addPart2("Доступны регистры от r0 до r15");
+                                }
                             }else{
-                                Errors.addPart2("Доступны регистры от r0 до r15");
+                                Errors.addPart2("Ожидалося регистр: " + currentLine);
+                                return false;
                             }
-                        }else{
-                            Errors.addPart2("Ожидалося регистр: " + currentLine);
+                        }
+                        case 1 -> {
+                        switch (currentLine.getLenght()) {
+                            case 4 ->                                 {
+                                    code += 1;//непосредственная
+                                    short[] addr = Utils.intToShortArray4(Integer.parseInt(arguments));
+                                    addr[0] = code;
+                                    relocationTable.add(currentLine.getAddress()); //добовляем в таблицу релокации все прямые адресации
+                                    currentLine.setObj(addr);
+                                }
+                            case 3 ->                                 {
+                                    //для относительной адрессации
+                                    code += 2;//относительная
+                                    int nextLineAddress = currentLine.getAddress().getAddress() + currentLine.getLenght();
+                                    int argumentAddress = Integer.parseInt(arguments);
+                                    int relativeAddres = argumentAddress - nextLineAddress;
+                                    short[] addr = Utils.intToShortArray4(relativeAddres);
+                                    currentLine.setObj(new short[]{code,addr[2],addr[3]});
+                                }
+                            case 2 -> {
+                                code += 1; //непосредственная
+                                short[] val = Utils.intToShortArray4(Integer.parseInt(arguments));
+                                val[0] = code;
+                                currentLine.setObj(new short[]{code,val[3]});
+                            }
+                            default -> {
+                            }
+                        }
+                        }
+                        default -> {
+                            Errors.addPart2("Некорректный формат агргумента: " + currentLine);
                             return false;
                         }
-                    }else if(split.length == 1){
-                        if(currentLine.getLenght()==4){
-                            code += 1;//непосредственная
-                            short[] addr = Utils.intToShortArray4(Integer.parseInt(arguments));
-                            addr[0] = code;
-                            relocationTable.add(currentLine.getAddress()); //добовляем в таблицу релокации все прямые адресации 
-                            currentLine.setObj(addr);
-                        }else if (currentLine.getLenght()==3) {
-                            //для относительной адрессации
-                            code += 2;//относительная
-                            int nextLineAddress = currentLine.getAddress().getAddress() + currentLine.getLenght();
-                            int argumentAddress = Integer.parseInt(arguments);
-                            int relativeAddres = argumentAddress - nextLineAddress;
-                            short[] addr = Utils.intToShortArray4(relativeAddres);
-                            currentLine.setObj(new short[]{code,addr[2],addr[3]});
-                        }else if(currentLine.getLenght() == 2){
-                            code += 1; //непосредственная
-                            short[] val = Utils.intToShortArray4(Integer.parseInt(arguments));
-                            val[0] = code;
-                            currentLine.setObj(new short[]{code,val[3]});
-                        }
-                    }else{
-                        Errors.addPart2("Некорректный формат агргумента: " + currentLine);
-                        return false;
                     }
                 }
             }else{

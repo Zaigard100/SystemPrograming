@@ -309,9 +309,8 @@ public class AssemblerGUI extends JFrame {
                     JOptionPane.showMessageDialog(AssemblerGUI.this, "Обнаружены ошибки в первом проходе.", "Ошибка", JOptionPane.ERROR_MESSAGE);
                 }
 
-            } catch (Exception ex) {
+            } catch (HeadlessException ex) {
                 errorsPass1Area.setText("Критическая ошибка: " + ex.getMessage());
-                ex.printStackTrace();
             }
             // ----------------------------------------------------------------------
         }
@@ -326,8 +325,6 @@ public class AssemblerGUI extends JFrame {
             errorsPass2Area.setText("");
             objectCodeArea.setText("");
             
-            // 2. Сбор данных и запуск Assembler (аналогично первому проходу)
-            String sourceCode = sourceCodeArea.getText();
             StringBuilder opcodeData = new StringBuilder();
             for (int i = 0; i < opcodeTableModel.getRowCount(); i++) {
                 String name = (String) opcodeTableModel.getValueAt(i, 0);
@@ -368,9 +365,8 @@ public class AssemblerGUI extends JFrame {
                 JOptionPane.showMessageDialog(AssemblerGUI.this, "Первый проход завершен с ошибками.", "Ошибка", JOptionPane.ERROR_MESSAGE);
                 
             }
-            } catch (Exception ex) {
+            } catch (HeadlessException ex) {
                 errorsPass2Area.setText("Критическая ошибка: " + ex.getMessage());
-                ex.printStackTrace();
             }
         }
     }

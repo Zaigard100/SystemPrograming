@@ -119,32 +119,35 @@ public class CodeLine {
 
     public String toObjString(){
         StringBuilder sb = new StringBuilder();
-        if(operationName.equals("start")){
-            sb.append("H ").append(label).append(" ");
-            int i = 0;
-            for(short b:obj){
-                sb.append(String.format("%02x", b));
-                if(i==3) sb.append(" ");
-                i++;
-            }
-        }else if(operationName.equals("end")){
-            sb.append("E ");
-            for(short b:obj){
-                sb.append(String.format("%02x", b));
-            }
-        }else{
-            sb.append("T ");
-            short[] addr = address.toBytes();
-            for(short b:addr){
-                sb.append(String.format("%02x", b));
-            }
-            sb.append(" ");
-            addr = Utils.intToShortArray4(lenght);
-            sb.append(String.format("%02x", addr[3]));
-            sb.append(" ");
-            if(!(operationName.equals("resb") || operationName.equals("resw") )){
+        switch (operationName) {
+            case "start" -> {
+                sb.append("H ").append(label).append(" ");
+                int i = 0;
                 for(short b:obj){
                     sb.append(String.format("%02x", b));
+                    if(i==3) sb.append(" ");
+                    i++;
+                }
+            }
+            case "end" -> {
+                sb.append("E ");
+                for(short b:obj){
+                    sb.append(String.format("%02x", b));
+                }
+            }
+            default -> {
+                sb.append("T ");
+                short[] addr = address.toBytes();
+                for(short b:addr){
+                    sb.append(String.format("%02x", b));
+                }   sb.append(" ");
+                addr = Utils.intToShortArray4(lenght);
+                sb.append(String.format("%02x", addr[3]));
+                sb.append(" ");
+                if(!(operationName.equals("resb") || operationName.equals("resw") )){
+                    for(short b:obj){
+                        sb.append(String.format("%02x", b));
+                    }
                 }
             }
         }

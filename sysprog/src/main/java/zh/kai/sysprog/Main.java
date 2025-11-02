@@ -3,8 +3,6 @@ package zh.kai.sysprog;
 import java.util.Comparator;
 import java.util.Map;
 
-import javax.swing.SwingUtilities;
-
 import zh.kai.sysprog.asm.Address;
 import zh.kai.sysprog.asm.CodeLine;
 import zh.kai.sysprog.asm.Errors;
