@@ -1,9 +1,9 @@
 package zh.kai.sysprog;
 
+import zh.kai.sysprog.Assembler.AdderssationType;
 import zh.kai.sysprog.asm.Address;
 import zh.kai.sysprog.asm.CodeLine;
 import zh.kai.sysprog.asm.Errors;
-import zh.kai.sysprog.asm.Operation;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -14,14 +14,14 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Comparator;
 import java.util.Map;
-import java.util.Vector;
-
-import javax.swing.border.Border;
 
 public class AssemblerGUI extends JFrame {
 
+    AdderssationType currentType;
+    Assembler asm;
+
     // --- Колонка 1: Исходные данные ---
-    private JComboBox<String> type;
+    private JComboBox<AdderssationType> type;
     private JTextArea sourceCodeArea;
     private DefaultTableModel opcodeTableModel;
     private JTable opcodeTable;
@@ -39,17 +39,17 @@ public class AssemblerGUI extends JFrame {
     public AssemblerGUI() {
         setTitle("AssemblerGUI");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setPreferredSize(new Dimension(1250, 750));
+        setPreferredSize(new Dimension(1400, 800));
 
         // Основная панель с тремя колонками
-        JPanel mainPanel = new JPanel(new GridLayout(1, 3, 5, 0)); // 1 строка, 3 столбца, 10px горизонтальный отступ
+        JPanel mainPanel = new JPanel(new GridLayout(1, 3, 10, 0)); // 1 строка, 3 столбца, 10px горизонтальный отступ
         
         mainPanel.add(createColumn1());
         mainPanel.add(createColumn2());
         mainPanel.add(createColumn3());
 
         getContentPane().add(mainPanel, BorderLayout.CENTER);
-        
+        setResizable(false);
         pack();
         setLocationRelativeTo(null); // Центрирование окна
     }
@@ -64,6 +64,7 @@ public class AssemblerGUI extends JFrame {
         sourceCodeArea = new JTextArea(20, 30);
         sourceCodeArea.setText(Main.text.trim()); // Заполнение примером
         JScrollPane sourceCodeScrollPane = new JScrollPane(sourceCodeArea);
+        sourceCodeScrollPane.setPreferredSize(new Dimension(450, 500));
         sourceCodeScrollPane.setBorder(new TitledBorder("Исходный код"));
         panel.add(sourceCodeScrollPane, BorderLayout.NORTH);
 
@@ -89,7 +90,7 @@ public class AssemblerGUI extends JFrame {
 
         JScrollPane opcodeScrollPane = new JScrollPane(opcodeTable);
         opcodeScrollPane.setBorder(new TitledBorder("Таблица кодов операций (Opcode)"));
-        opcodeScrollPane.setPreferredSize(new Dimension(350, 200));
+        opcodeScrollPane.setPreferredSize(new Dimension(450, 200));
         panel.add(opcodeScrollPane, BorderLayout.CENTER);
         
         // 1.3. Кнопки
@@ -107,11 +108,11 @@ public class AssemblerGUI extends JFrame {
         
         //panel.add(buttonPanel, BorderLayout.SOUTH);
 
-        DefaultComboBoxModel<String> typeBoxModel = new DefaultComboBoxModel<String>();
-        typeBoxModel.addElement("Прямая");
-        typeBoxModel.addElement("Относительная");
-        typeBoxModel.addElement("Смешанная");
-        type = new JComboBox<String>(typeBoxModel);
+        DefaultComboBoxModel<AdderssationType> typeBoxModel = new DefaultComboBoxModel<>();
+        typeBoxModel.addElement(AdderssationType.DIRECT);
+        typeBoxModel.addElement(AdderssationType.RELATIVE);
+        typeBoxModel.addElement(AdderssationType.CHAINED);
+        type = new JComboBox<>(typeBoxModel);
 
         up_panel.add(type,BorderLayout.NORTH);
         up_panel.add(panel,BorderLayout.CENTER);
@@ -215,7 +216,7 @@ public class AssemblerGUI extends JFrame {
     private class AddRowListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
-            opcodeTableModel.addRow(new Object[]{"<ИМЯ>", "00", "1"});
+            opcodeTableModel.addRow(new Object[]{"<ИМЯ>", "<КОД>", "<ДЛИН>"});
         }
     }
 
@@ -264,14 +265,14 @@ public class AssemblerGUI extends JFrame {
 
             // --- Подключение к логике (Необходимо модифицировать Assembler.java) ---
             try {
-                
-                Assembler assembler = createAssemblerInstance(sourceCode, opcodeData.toString());
-                assembler.init();
-                if (assembler.firstPass()) {
+                currentType = (AdderssationType) type.getSelectedItem();
+                asm = createAssemblerInstance(sourceCode, opcodeData.toString());
+                asm.init();
+                if (asm.firstPass()) {
                     // Успех - заполняем таблицы
                     
                     // Вспомогательная таблица
-                    for (CodeLine cl : assembler.getCodeLines()) {
+                    for (CodeLine cl : asm.getCodeLines()) {
                         if("start".equals(cl.getOperationName())){
                             auxTableModel.addRow(new Object[]{
                                 String.format("%s", cl.getLabel()),
@@ -285,7 +286,7 @@ public class AssemblerGUI extends JFrame {
                         }
                     }
 
-                    assembler.getSymTab().entrySet().stream()
+                    asm.getSymTab().entrySet().stream()
                     // 1. Сортируем по адресу.
                     // Map.Entry.comparingByValue() позволяет сравнивать по значению (Address).
                     // Comparator.comparing(Address::getAddress) указывает, что нужно сравнивать результат Address.getAddress().
@@ -336,14 +337,16 @@ public class AssemblerGUI extends JFrame {
             }
             
             try {
+                if(asm == null){
+                    JOptionPane.showMessageDialog(AssemblerGUI.this, "Первый проход не завершен.", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
                 // Повторное создание/инициализация для второго прохода
-                Assembler assembler = createAssemblerInstance(sourceCode, opcodeData.toString());
-                assembler.init();
-                if(assembler.firstPass()){ // Должен быть успешным для второго прохода
+                if(asm.isFirstPass()){ // Должен быть успешным для второго прохода
                 
-                if (assembler.secondPass()) {
+                if (asm.secondPass()) {
                     // Успех - заполняем объектный код
-                    assembler.getRelocationTable().stream()
+                    asm.getRelocationTable().stream()
                     .forEach(entry -> {
                         relTabModel.addRow(new Object[]{
                             String.format("%06X", entry.getAddress())
@@ -351,7 +354,7 @@ public class AssemblerGUI extends JFrame {
                     });
 
                     StringBuilder objCode = new StringBuilder();
-                    for (CodeLine cl : assembler.getCodeLines()) {
+                    for (CodeLine cl : asm.getCodeLines()) {
                         objCode.append(cl.toObjString()).append("\n");
                     }
                     objectCodeArea.setText(objCode.toString());
@@ -377,15 +380,8 @@ public class AssemblerGUI extends JFrame {
         
         Errors.setPart1("");
         Errors.setPart2("");
-        Main.text = sourceCode;
-        Main.opcod = opcodeData;
-        
-        // Принудительная очистка ошибок для нового прохода
-        Errors.addPart1(""); // Это не очистит, нужно добавить reset в Errors.java
-        
-        type.addNotify();
 
-        return new Assembler(Assembler.AdderssationType.CHAINED); // Вызовет старые Main.text/opcod если они не обновлены
+        return new Assembler(sourceCode,opcodeData,currentType);
     }
 
     public static void main(String[] args) {

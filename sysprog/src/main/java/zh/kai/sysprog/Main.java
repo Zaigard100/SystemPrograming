@@ -48,7 +48,7 @@ public class Main {
     public static void main(String[] args) {
 
 
-        Assembler asm = new Assembler(Assembler.AdderssationType.CHAINED);
+        Assembler asm = new Assembler(text,opcod,Assembler.AdderssationType.CHAINED);
         asm.init();
         System.out.println("Исходный текст:");
         for(CodeLine cl:asm.getCodeLines()){
@@ -73,7 +73,7 @@ public class Main {
         System.out.println("_______________________");
 
         System.out.println("Таблица кодов:");
-        for(Operation cl:asm.getOperationCodes()){
+        for(Operation cl:asm.getOperationsCodes()){
                 System.out.printf( "%-8s %s %s\n",
                     cl.getName(),
                     cl.getCode(),

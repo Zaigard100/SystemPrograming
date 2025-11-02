@@ -1,26 +1,41 @@
 package zh.kai.sysprog;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
 
-import javax.swing.text.Utilities;
-
+import lombok.Getter;
+import lombok.Setter;
 import zh.kai.sysprog.asm.Address;
 import zh.kai.sysprog.asm.CodeLine;
 import zh.kai.sysprog.asm.Errors;
 import zh.kai.sysprog.asm.Operation;
 import zh.kai.sysprog.utils.Utils;
 
+@Getter
+@Setter
 public class Assembler {
 
     public enum AdderssationType{
-        DIRECT, //прямая
-        RELATIVE, //относительная
-        CHAINED //смешанная
+        DIRECT("Прямая"), //прямая
+        RELATIVE("Относительная"), //относительная
+        CHAINED("Смешанная"); //смешанная
+        
+        String typeName;
+
+        AdderssationType(String typeName){
+            this.typeName = typeName;
+        }
+
+        @Override
+        public String toString() {
+            return typeName;
+        }
+
+        
+
     }
 
     public static final int WORD_LENGHT = 3;
@@ -34,6 +49,11 @@ public class Assembler {
     private HashMap<String, Address> symTab;
 
     private AdderssationType type;
+    private boolean isFirstPass = false;
+    private boolean isSecondPass = false;
+
+    private String sourceCode;
+    private String operationCodeTable;
     
 
     public static HashSet<String> dirrectives = new HashSet<>(List.of(
@@ -45,12 +65,14 @@ public class Assembler {
 
 
     
-    public Assembler(AdderssationType type){
+    public Assembler(String text, String opCodes,AdderssationType type){
         this.type = type;
+        sourceCode = text;
+        operationCodeTable = opCodes;
     }
     
     public void init(){
-        init(Main.text,Main.opcod);
+        init(sourceCode,operationCodeTable);
     }
 
     public void init(String code,String operationCode){
@@ -191,6 +213,7 @@ public class Assembler {
                         return false;
                     }
                     if(operationName.equals("end")){
+                        isFirstPass = !hasError;
                         return !hasError;
                     }
                     try{
@@ -227,6 +250,8 @@ public class Assembler {
             Errors.addPart1("Ожидается end");
             return false;
         }
+
+        isFirstPass = !hasError;
         return !hasError;
 
     }
@@ -266,6 +291,7 @@ public class Assembler {
                     short[] length = Utils.intToShortArray4(currentLine.getAddress().getAddress() - headerArg);
                     header.setObj(new short[]{addres[1],addres[2],addres[3],length[1],length[2],length[3]});
 
+                    isSecondPass = !hasError;
                     return !hasError;
                 }
                 if(operationName.equals("resb") || operationName.equals("resw") ){
@@ -375,6 +401,7 @@ public class Assembler {
                 return false;
             }
         }
+        isSecondPass = !hasError;
         return !hasError;
     }
 
@@ -430,30 +457,6 @@ public class Assembler {
             if(code == op.getCode()) return op;
         }
         return null;
-    }
-
-    public ArrayList<Address> getRelocationTable() {
-        return relocationTable;
-    }
-
-    public void setRelocationTable(ArrayList<Address> relocationTable) {
-        this.relocationTable = relocationTable;
-    }
-
-    public HashMap<String, Address> getSymTab() {
-        return symTab;
-    }
-
-    public void setSymTab(HashMap<String, Address> symTab) {
-        this.symTab = symTab;
-    }
-
-    public ArrayList<CodeLine> getCodeLines() {
-        return codeLines;
-    }
-
-    public ArrayList<Operation> getOperationCodes() {
-        return operationsCodes;
     }
 
 }
