@@ -94,4 +94,9 @@ public class Utils {
         return s.matches("^[0-9A-Fa-f]+$");
     }
 
+    public static boolean isValidLabel(String label) {
+        String regex = "^\\.\\w+$";
+        return label.matches(regex);
+    }
+
 }

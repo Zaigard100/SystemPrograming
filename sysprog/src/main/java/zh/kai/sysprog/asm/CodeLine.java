@@ -1,6 +1,7 @@
 package zh.kai.sysprog.asm;
 
 import zh.kai.sysprog.Assembler;
+import zh.kai.sysprog.Assembler.AdderssationType;
 import zh.kai.sysprog.utils.Utils;
 
 public class CodeLine {
@@ -19,7 +20,7 @@ public class CodeLine {
         this.operationName = operationName;
     }
 
-    public boolean checkLenght(){
+    public boolean checkLenght(AdderssationType type){
 
         float len = 1;
 
@@ -33,12 +34,29 @@ public class CodeLine {
 
             String[] args = arguments.split(" ");
 
+
             for (String a : args) {
-                if(a.startsWith(".")){
+                if(a.startsWith("[")){
+                    if(type == AdderssationType.DIRECT){
+                        Errors.addPart1("Относительная адресация не поддерживается: "+this);
+                        return false;
+                    }
+                    if(a.endsWith("]")){
+                        a = a.substring(1, a.length()-1);
+                        if(a.startsWith(".")){
+                            len+=Assembler.WORD_LENGHT;
+                        }
+                    }else{
+                        Errors.addPart1("Некорректный аргумент");
+                        return false;
+                    }
+                }else if(a.startsWith(".")){
+                    if(type == AdderssationType.RELATIVE){
+                        Errors.addPart1("Прямая адресация не поддерживается: "+this);
+                        return false;
+                    }
                     if(lenght==4){
                         len+=Assembler.WORD_LENGHT;
-                    }else if(lenght == 3){
-                        len+=Assembler.REL_LENGHT;
                     }
                 }else if(a.startsWith("r")){
                     len += 0.5;
@@ -46,11 +64,6 @@ public class CodeLine {
                     if(Integer.parseInt(a)>=0){
                         if(lenght == 2){
                             if(Integer.parseInt(a)<Assembler.MAX_BYTE){
-                                return true;
-                            }
-                        }
-                        if(lenght == 3){
-                            if(Integer.parseInt(a)<Assembler.REL_MAX){
                                 return true;
                             }
                         }
@@ -125,7 +138,7 @@ public class CodeLine {
                 int i = 0;
                 for(short b:obj){
                     sb.append(String.format("%02x", b));
-                    if(i==3) sb.append(" ");
+                    if(i==2) sb.append(" ");
                     i++;
                 }
             }

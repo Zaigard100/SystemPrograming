@@ -63,6 +63,8 @@ public class AssemblerGUI extends JFrame {
         // 1.1. Исходный код (JTextArea)
         sourceCodeArea = new JTextArea(20, 30);
         sourceCodeArea.setText(Main.text.trim()); // Заполнение примером
+        Font font = new Font("Consolas", Font.PLAIN, 14);
+        sourceCodeArea.setFont(font);
         JScrollPane sourceCodeScrollPane = new JScrollPane(sourceCodeArea);
         sourceCodeScrollPane.setPreferredSize(new Dimension(450, 500));
         sourceCodeScrollPane.setBorder(new TitledBorder("Исходный код"));
@@ -109,9 +111,9 @@ public class AssemblerGUI extends JFrame {
         //panel.add(buttonPanel, BorderLayout.SOUTH);
 
         DefaultComboBoxModel<AdderssationType> typeBoxModel = new DefaultComboBoxModel<>();
+        typeBoxModel.addElement(AdderssationType.CHAINED);
         typeBoxModel.addElement(AdderssationType.DIRECT);
         typeBoxModel.addElement(AdderssationType.RELATIVE);
-        typeBoxModel.addElement(AdderssationType.CHAINED);
         type = new JComboBox<>(typeBoxModel);
 
         up_panel.add(type,BorderLayout.NORTH);
@@ -182,6 +184,7 @@ public class AssemblerGUI extends JFrame {
         // 3.1. Объектный код (JTextArea)
         objectCodeArea = new JTextArea();
         objectCodeArea.setEditable(false);
+        objectCodeArea.setFont(new Font("Consolas", Font.PLAIN, 14));
         JScrollPane objCodeScrollPane = new JScrollPane(objectCodeArea);
         objCodeScrollPane.setBorder(new TitledBorder("Объектный код"));
         panel.add(objCodeScrollPane);

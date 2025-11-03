@@ -39,10 +39,8 @@ public class Assembler {
     }
 
     public static final int WORD_LENGHT = 3;
-    public static final int REL_LENGHT = 2;
     public static final int MAX_BYTE = 256;
     public static final int WORD_MAX = 16_777_216;
-    public static final int REL_MAX = 65_536;
     private ArrayList<Operation> operationsCodes;
     private ArrayList<CodeLine> codeLines;
     private ArrayList<Address> relocationTable;
@@ -146,7 +144,9 @@ public class Assembler {
                        case 1 -> codeLines.add(new CodeLine(null, split[0], null)); //без аргументов
                    }
                }
-               if("end".equals(codeLines.getLast().getOperationName())){
+               
+               CodeLine last = codeLines.getLast();
+               if("end".equals(last.getOperationName())){
                 return;
                }
             }
@@ -166,7 +166,7 @@ public class Assembler {
             try{
                 lc = Integer.parseInt(header.getArguments()); //заполняем начальный адрес LOCCTR
             }catch(NumberFormatException e){
-                Errors.addPart1("Аргумент дерректива startдолжен быть адрес: "+ header);
+                Errors.addPart1("Аргумент дерректива start должен быть адрес: "+ header);
                 return false;
             }
         }else{
@@ -188,6 +188,10 @@ public class Assembler {
 
             currentLine.setAddress(new Address(lc));
             if(currentLine.getLabel()!=null){
+                if(!Utils.isValidLabel(currentLine.getLabel())){
+                    Errors.addPart1("Некорректный формат метки: "+i+": "+currentLine);
+                    hasError = true;
+                }
                 if(symTab.containsKey(currentLine.getLabel())){
                     Errors.addPart1("Дубликат метки на строке "+i+": "+currentLine);
                     hasError = true;
@@ -225,7 +229,7 @@ public class Assembler {
                             return false;
                         }
                         currentLine.setLenght(lenght);
-                        if(!currentLine.checkLenght()){
+                        if(!currentLine.checkLenght(type)){
                             hasError = true;
                         }
                         lc += lenght;
@@ -240,7 +244,8 @@ public class Assembler {
             }else{
                 int lenght = currentOperation.getLenght();
                 currentLine.setLenght(lenght);
-                if(!currentLine.checkLenght()){
+                
+                if(!currentLine.checkLenght(type)){
                     hasError = true;
                 }
                 lc += lenght;
@@ -335,21 +340,44 @@ public class Assembler {
                 String arguments = currentLine.getArguments();
                 if(arguments == null){
                     currentLine.setObj(new short[]{code});
+                }else if(arguments.startsWith("[")){
+                    if(type == AdderssationType.DIRECT){
+                        Errors.addPart1("Относительная адресация не поддерживается: "+this);
+                        return false;
+                    }
+                    if(arguments.endsWith("]")){
+                        arguments = arguments.substring(1, arguments.length()-1);
+                        code += 2;//относительная
+                        if(arguments.startsWith(".")){
+                            //для относительной адрессации
+                            int nextLineAddress = currentLine.getAddress().getAddress() + currentLine.getLenght();
+                            int labelAddress = symTab.get(currentLine.getArguments().substring(1, currentLine.getArguments().length()-1)).getAddress();
+                            int relativeAddres = labelAddress - nextLineAddress;
+                            short[] addr = Utils.intToShortArray4(relativeAddres);
+                            currentLine.setObj(new short[]{code,addr[1],addr[2],addr[3]});
+                        }else if(Utils.isIntegerRegex(arguments)){
+                            //для относительной адрессации
+                            int nextLineAddress = currentLine.getAddress().getAddress() + currentLine.getLenght();
+                            int argumentAddress = Integer.parseInt(arguments);
+                            int relativeAddres = argumentAddress - nextLineAddress;
+                            short[] addr = Utils.intToShortArray4(relativeAddres);
+                            currentLine.setObj(new short[]{code,addr[1],addr[2],addr[3]});
+                        }
+                    }else{
+                        Errors.addPart1("Некорректный аргумент");
+                        return false;
+                    }
                 }else if(arguments.startsWith(".")){
+                    if(type == AdderssationType.RELATIVE){
+                        Errors.addPart1("Прямая адресация не поддерживается: "+this);
+                        return false;
+                    }
                     if(currentLine.getLenght() == 4){
                         code += 1;//непосредственная
                         short[] addr = symTab.get(currentLine.getArguments()).toBytes();
                         //addr[0] = code;
                         currentLine.setObj(new short[]{code,addr[0],addr[1],addr[2]});
                         relocationTable.add(currentLine.getAddress()); //добовляем в таблицу релокации все прямые адресации 
-                    }else if(currentLine.getLenght()==3){
-                        //для относительной адрессации
-                        code += 2; //относиетльная
-                        int nextLineAddress = currentLine.getAddress().getAddress() + currentLine.getLenght();
-                        int labelAddress = symTab.get(currentLine.getArguments()).getAddress();
-                        int relativeAddres = labelAddress - nextLineAddress;
-                        short[] addr = Utils.intToShortArray4(relativeAddres);
-                        currentLine.setObj(new short[]{code,addr[2],addr[3]});
                     }
                 }else{
                     String[] split = arguments.split(" ");
@@ -378,15 +406,6 @@ public class Assembler {
                                     addr[0] = code;
                                     relocationTable.add(currentLine.getAddress()); //добовляем в таблицу релокации все прямые адресации
                                     currentLine.setObj(addr);
-                                }
-                            case 3 ->                                 {
-                                    //для относительной адрессации
-                                    code += 2;//относительная
-                                    int nextLineAddress = currentLine.getAddress().getAddress() + currentLine.getLenght();
-                                    int argumentAddress = Integer.parseInt(arguments);
-                                    int relativeAddres = argumentAddress - nextLineAddress;
-                                    short[] addr = Utils.intToShortArray4(relativeAddres);
-                                    currentLine.setObj(new short[]{code,addr[2],addr[3]});
                                 }
                             case 2 -> {
                                 code += 1; //непосредственная

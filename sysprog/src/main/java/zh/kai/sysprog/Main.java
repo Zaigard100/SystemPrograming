@@ -13,14 +13,15 @@ public class Main {
     static String text = """
     .prog start 100
     .pstart
-        lda .one
+        lda [.one]
         mov r1 r2
-        lda .two
+        lda [.two]
         add r1 r2
-        sta .res
+        sta [.res]
         int 29
         clr
-        jmpn .pstart
+        jmp [.pstart]
+        jmp .pstart
         resb 4
     .data
     .bighex byte X"FAF09"
@@ -40,7 +41,6 @@ public class Main {
     clr 5 1
     mov 6 2
     jmp 7 4
-    jmpn 8 3
     """;
 
     public static void main(String[] args) {
