@@ -11,7 +11,7 @@ import zh.kai.sysprog.asm.Operation;
 public class Main {
 
     static String text = """
-    .prog start 100
+    .prog start
     .pstart
         lda [.one]
         mov r1 r2
@@ -30,7 +30,7 @@ public class Main {
     .two byte 2
     .res word 34
     .hello byte C"Hello"
-        end 101
+        end
     """;
 
     static String opcod = """

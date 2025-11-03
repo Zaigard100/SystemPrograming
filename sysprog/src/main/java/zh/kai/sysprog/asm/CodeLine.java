@@ -1,9 +1,13 @@
 package zh.kai.sysprog.asm;
 
+import lombok.Getter;
+import lombok.Setter;
 import zh.kai.sysprog.Assembler;
 import zh.kai.sysprog.Assembler.AdderssationType;
 import zh.kai.sysprog.utils.Utils;
 
+@Getter
+@Setter
 public class CodeLine {
 
     private String label; //метка
@@ -88,29 +92,6 @@ public class CodeLine {
         return false;
     }
 
-    public String getLabel() {
-        return label;
-    }
-
-    public void setLabel(String label) {
-        this.label = label;
-    }
-
-    public String getOperationName() {
-        return operationName;
-    }
-
-    public void setOperationName(String operationName) {
-        this.operationName = operationName;
-    }
-
-    public String getArguments() {
-        return arguments;
-    }
-
-    public void setArguments(String arguments) {
-        this.arguments = arguments;
-    }
     @Override
     public String toString(){
         StringBuilder sb = new StringBuilder();
@@ -165,30 +146,6 @@ public class CodeLine {
             }
         }
         return sb.toString();
-    }
-
-    public Address getAddress() {
-        return address;
-    }
-
-    public void setAddress(Address address) {
-        this.address = address;
-    }
-
-    public int getLenght() {
-        return lenght;
-    }
-
-    public void setLenght(int lenght) {
-        this.lenght = lenght;
-    }
-
-    public short[] getObj() {
-        return obj;
-    }
-
-    public void setObj(short[] obj) {
-        this.obj = obj;
     }
 
 }

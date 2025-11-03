@@ -170,11 +170,11 @@ public class Assembler {
                 return false;
             }
         }else{
-            Errors.addPart1("Неопределена точка старта программы");
-            hasError = true;
+            header.setArguments("0");
+            lc = 0;
         }
-        if(lc <= 0){
-            Errors.addPart1("Точка старта программы не может быть больше 0");
+        if(lc < 0){
+            Errors.addPart1("Не корректнаяя точка старта");
             hasError = true;
         }
 
