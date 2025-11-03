@@ -66,7 +66,7 @@ public class AssemblerGUI extends JFrame {
         Font font = new Font("Consolas", Font.PLAIN, 14);
         sourceCodeArea.setFont(font);
         JScrollPane sourceCodeScrollPane = new JScrollPane(sourceCodeArea);
-        sourceCodeScrollPane.setPreferredSize(new Dimension(450, 500));
+        sourceCodeScrollPane.setPreferredSize(new Dimension(450, 450));
         sourceCodeScrollPane.setBorder(new TitledBorder("Исходный код"));
         panel.add(sourceCodeScrollPane, BorderLayout.NORTH);
 
