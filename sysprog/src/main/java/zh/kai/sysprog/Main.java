@@ -12,10 +12,13 @@ public class Main {
 
     static String text = """
     .prog start
+        extdef .data .res
+        extref .key .hash
     .pstart
         lda [.one]
         mov r1 r2
-        lda [.two]
+        sta .hash
+        lda .two
         add r1 r2
         sta [.res]
         int 29
@@ -48,6 +51,9 @@ public class Main {
 
         Assembler asm = new Assembler(text,opcod,Assembler.AdderssationType.CHAINED);
         asm.init();
+
+        System.out.println("Тип адресации: "+asm.getType());
+
         System.out.println("Исходный текст:");
         for(CodeLine cl:asm.getCodeLines()){
                 String a1 = cl.getLabel();
@@ -97,8 +103,10 @@ public class Main {
                 ))
                 // 2. Выводим результат в нужном формате
                 .forEach(entry -> 
-                    System.out.printf("%-12s %06X\n",
-                        entry.getKey(), entry.getValue().getAddress()
+                    System.out.printf("%-12s %06X %s\n",
+                        entry.getKey(), 
+                        entry.getValue().getAddress(),
+                        asm.getExternalLinks().keySet().contains(entry.getKey())?1:0
                     )
             );
             System.out.println("_______________________");
@@ -107,9 +115,22 @@ public class Main {
             if(asm.secondPass()){
 
                 System.out.println("Таблица перемещений:");
-                for(Address adr:asm.getRelocationTable()){
-                    System.out.printf("%06X\n",adr.getAddress());
+                for(Address adr:asm.getRelocationTable().keySet()){
+                    System.out.printf("%06X %s\n",
+                        adr.getAddress(),
+                        asm.getRelocationTable().get(adr)
+                    );
                 }
+                System.out.println("_______________________");
+
+                System.out.println("Таблица внешних ссылок:");
+                for(String s:asm.getExternalLinks().keySet()){
+                    System.out.printf("%-12s %06X\n",
+                        s,
+                        asm.getExternalLinks().get(s).getAddress()
+                    );
+                }
+
                 System.out.println("_______________________");
                 System.out.println("Обьектный код:");
                 for(CodeLine cl:asm.getCodeLines()){

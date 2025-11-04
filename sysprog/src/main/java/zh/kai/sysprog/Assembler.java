@@ -43,8 +43,10 @@ public class Assembler {
     public static final int WORD_MAX = 16_777_216;
     private ArrayList<Operation> operationsCodes;
     private ArrayList<CodeLine> codeLines;
-    private ArrayList<Address> relocationTable;
-    private HashMap<String, Address> symTab;
+    private HashMap<String,Address> symTab;
+    private HashMap<Address,String> relocationTable;
+    private HashMap<String,Address> externalLinks;
+    private ArrayList<String> externalSymbols;
 
     private AdderssationType type;
     private boolean isFirstPass = false;
@@ -56,6 +58,7 @@ public class Assembler {
 
     public static HashSet<String> dirrectives = new HashSet<>(List.of(
         "start","end",
+        "extdef","extref",
         "r0","r1","r2","r3","r4","r5","r6","r7",
         "r8","r9","r10","r11","r12","r13","r14","r15",
         "resb","resw","byte","word"
@@ -77,7 +80,9 @@ public class Assembler {
         parseOperationsCodes(operationCode);
         parseCode(code);
         symTab = new HashMap<>();
-        relocationTable = new ArrayList<>();
+        relocationTable = new HashMap<>();
+        externalLinks = new HashMap<>();
+        externalSymbols = new ArrayList<>();
     }
 
     public void parseOperationsCodes(String text){
@@ -161,7 +166,7 @@ public class Assembler {
             return false;
         }
 
-        int lc = -1;
+        int lc;
         if(header.getArguments()!= null){
             try{
                 lc = Integer.parseInt(header.getArguments()); //заполняем начальный адрес LOCCTR
@@ -187,16 +192,24 @@ public class Assembler {
             }
 
             currentLine.setAddress(new Address(lc));
-            if(currentLine.getLabel()!=null){
-                if(!Utils.isValidLabel(currentLine.getLabel())){
+            String label = currentLine.getLabel();
+            if(label!=null){
+                if(!Utils.isValidLabel(label)){
                     Errors.addPart1("Некорректный формат метки: "+i+": "+currentLine);
                     hasError = true;
                 }
-                if(symTab.containsKey(currentLine.getLabel())){
+                if(symTab.containsKey(label)){
                     Errors.addPart1("Дубликат метки на строке "+i+": "+currentLine);
                     hasError = true;
                 }
-                symTab.put(currentLine.getLabel(), new Address(lc));
+                if(externalSymbols.contains(label)){
+                    Errors.addPart1("Дубликат метки из extref на строке "+i+": "+currentLine);
+                    hasError = true;
+                }
+                if(externalLinks.containsKey(label)){
+                    externalLinks.put(label, currentLine.getAddress());
+                }
+                symTab.put(label, currentLine.getAddress());
                 if(currentLine.getOperationName() == null){// проверка на строку метку
                     codeLines.remove(i);// удаление строки метки
                     i--;
@@ -212,13 +225,41 @@ public class Assembler {
                         Errors.addPart1("Имя операции "+operationName+" не может быть регистром: "+ currentLine);
                         return false;
                     }
-                    if(operationName.equals("start")){
-                        Errors.addPart1("Дирректива "+operationName+" не может быть использована лишь в начале программы: "+ currentLine);
-                        return false;
-                    }
-                    if(operationName.equals("end")){
-                        isFirstPass = !hasError;
-                        return !hasError;
+                    switch (operationName) {
+                        case "start" -> {
+                            Errors.addPart1("Дирректива "+operationName+" не может быть использована лишь в начале программы: "+ currentLine);
+                            return false;
+                        }
+                        case "end" -> {
+
+                            for(String s:externalLinks.keySet()){
+                                if(externalLinks.get(s)==null){
+                                    Errors.addPart1("Ненайдена метка из extdef: "+s);
+                                    return  false;
+                                }
+                            }
+                            isFirstPass = !hasError;
+                            return !hasError;
+                        }
+                        case "extref" -> {
+                            for(String s: currentLine.getArguments().split(" ")){
+                                if(symTab.containsKey(s.trim())){
+                                    
+                                    Errors.addPart1("Дубликат метки в extref на строке "+i+": "+currentLine);
+                                    hasError = true;
+                                }
+                                externalSymbols.add(s.trim());
+                            }
+                            codeLines.remove(i);
+                            i--;
+                        }
+                        case "extdef" -> {
+                            for(String s: currentLine.getArguments().split(" ")){
+                                externalLinks.put(s.trim(), null);
+                            }
+                            codeLines.remove(i);
+                           i--;
+                        }
                     }
                     try{
                         int lenght;
@@ -257,6 +298,7 @@ public class Assembler {
         }
 
         isFirstPass = !hasError;
+
         return !hasError;
 
     }
@@ -269,68 +311,68 @@ public class Assembler {
             CodeLine currentLine = codeLines.get(i);
             String operationName = currentLine.getOperationName();
             if(dirrectives.contains(operationName)){
-                if(operationName.equals("end")){
-                    String arguments = currentLine.getArguments();
-                    int headerArg = Integer.parseInt(header.getArguments());
-                    if(arguments != null){
-                        int start;
-                        try{
-                        start = Integer.parseInt(arguments);
-                        if(start >= headerArg && start<= currentLine.getAddress().getAddress()){
-                            short[] addres = Utils.intToShortArray4(start);
-                            currentLine.setObj(new short[]{addres[1],addres[2],addres[3]});
-                        }else{
-                            Errors.addPart2("Некорректный аргумент end адрес должен находится в диапозоне кода");
-                            hasError = true;
-                        }
-                        }catch(NumberFormatException e){
-                            Errors.addPart2("Некорректный аргумент end ожидается адрес");
-                            return false;
-                        }
-                    }else{
-                        int start = headerArg;
-                        short[] addres = Utils.intToShortArray4(start);
-                        currentLine.setObj(new short[]{addres[1],addres[2],addres[3],});
-                    }
-                    short[] addres = Utils.intToShortArray4(headerArg);
-                    short[] length = Utils.intToShortArray4(currentLine.getAddress().getAddress() - headerArg);
-                    header.setObj(new short[]{addres[1],addres[2],addres[3],length[1],length[2],length[3]});
-
-                    isSecondPass = !hasError;
-                    return !hasError;
-                }
-                if(operationName.equals("resb") || operationName.equals("resw") ){
-                    currentLine.setObj(new short[currentLine.getLenght()]);
-                }
-                if(operationName.equals("word")){
-                    int data = Integer.parseInt(currentLine.getArguments());
-                    short[] obj = Utils.intToShortArray4(data);
-                    currentLine.setObj(new short[]{obj[1],obj[2],obj[3]});
-                }
-                if(operationName.equals("byte")){
-                    String arguments = currentLine.getArguments().trim();
-                    if(arguments.startsWith("C\"") && arguments.endsWith("\"")){
-                        try{
-                            short[] data = Utils.stringToAsciiShortArray(arguments.substring(2, arguments.length()-1));
-                            currentLine.setObj(data);
-                        }catch(Exception e){
-                            if(e.getMessage().equals("noascii")){
-                                Errors.addPart2("Встречен не ASCII символ: " + arguments.substring(2, arguments.length()-1));
-                                hasError = true;
+                switch (operationName) {
+                    case "end" -> {
+                        String arguments = currentLine.getArguments();
+                        int headerArg = Integer.parseInt(header.getArguments());
+                        if(arguments != null){
+                            int start;
+                            try{
+                                start = Integer.parseInt(arguments);
+                                if(start >= headerArg && start<= currentLine.getAddress().getAddress()){
+                                    short[] addres = Utils.intToShortArray4(start);
+                                    currentLine.setObj(new short[]{addres[1],addres[2],addres[3]});
+                                }else{
+                                    Errors.addPart2("Некорректный аргумент end адрес должен находится в диапозоне кода");
+                                    hasError = true;
+                                }
+                            }catch(NumberFormatException e){
+                                Errors.addPart2("Некорректный аргумент end ожидается адрес");
+                                return false;
                             }
-                        }
-                    }else if(arguments.startsWith("X\"") && arguments.endsWith("\"")){
-                        String hexString = arguments.substring(2, arguments.length()-1);
-                        if(Utils.isHex(hexString)){
-                            short[] hex = Utils.hexStringToShortArray(hexString);
-                            currentLine.setObj(hex);
                         }else{
-                            Errors.addPart2("Ожидалось hex: "+ hexString);
+                            int start = headerArg;
+                            short[] addres = Utils.intToShortArray4(start);
+                            currentLine.setObj(new short[]{addres[1],addres[2],addres[3],});
                         }
-                    }else{
+                        short[] addres = Utils.intToShortArray4(headerArg);
+                        short[] length = Utils.intToShortArray4(currentLine.getAddress().getAddress() - headerArg);
+                        header.setObj(new short[]{addres[1],addres[2],addres[3],length[1],length[2],length[3]});
+                        
+                        isSecondPass = !hasError;
+                        return !hasError;
+                    }
+                    case "resb", "resw" -> currentLine.setObj(new short[currentLine.getLenght()]);
+                    case "word" -> {
                         int data = Integer.parseInt(currentLine.getArguments());
                         short[] obj = Utils.intToShortArray4(data);
-                        currentLine.setObj(new short[]{obj[3]});
+                        currentLine.setObj(new short[]{obj[1],obj[2],obj[3]});
+                    }
+                    case "byte" -> {
+                        String arguments = currentLine.getArguments().trim();
+                        if(arguments.startsWith("C\"") && arguments.endsWith("\"")){
+                            try{
+                                short[] data = Utils.stringToAsciiShortArray(arguments.substring(2, arguments.length()-1));
+                                currentLine.setObj(data);
+                            }catch(Exception e){
+                                if(e.getMessage().equals("noascii")){
+                                    Errors.addPart2("Встречен не ASCII символ: " + arguments.substring(2, arguments.length()-1));
+                                    hasError = true;
+                                }
+                            }
+                        }else if(arguments.startsWith("X\"") && arguments.endsWith("\"")){
+                            String hexString = arguments.substring(2, arguments.length()-1);
+                            if(Utils.isHex(hexString)){
+                                short[] hex = Utils.hexStringToShortArray(hexString);
+                                currentLine.setObj(hex);
+                            }else{
+                                Errors.addPart2("Ожидалось hex: "+ hexString);
+                            }
+                        }else{
+                            int data = Integer.parseInt(currentLine.getArguments());
+                            short[] obj = Utils.intToShortArray4(data);
+                            currentLine.setObj(new short[]{obj[3]});
+                        }
                     }
                 }
             }else if(getOperationByName(operationName)!=null){ 
@@ -347,6 +389,10 @@ public class Assembler {
                     }
                     if(arguments.endsWith("]")){
                         arguments = arguments.substring(1, arguments.length()-1);
+                        if(externalSymbols.contains(arguments)){
+                            Errors.addPart2("Внешние ссылки не поддерживают относитльную адресацию");
+                            return false;
+                        }
                         code += 2;//относительная
                         if(arguments.startsWith(".")){
                             //для относительной адрессации
@@ -374,10 +420,14 @@ public class Assembler {
                     }
                     if(currentLine.getLenght() == 4){
                         code += 1;//непосредственная
-                        short[] addr = symTab.get(currentLine.getArguments()).toBytes();
-                        //addr[0] = code;
-                        currentLine.setObj(new short[]{code,addr[0],addr[1],addr[2]});
-                        relocationTable.add(currentLine.getAddress()); //добовляем в таблицу релокации все прямые адресации 
+                        if(externalSymbols.contains(arguments)){
+                            relocationTable.put(currentLine.getAddress(),arguments); 
+                            currentLine.setObj(new short[]{code,0,0,0});
+                        }else{
+                            short[] addr = symTab.get(currentLine.getArguments()).toBytes();
+                            currentLine.setObj(new short[]{code,addr[0],addr[1],addr[2]});
+                            relocationTable.put(currentLine.getAddress(),""); //добовляем в таблицу релокации все прямые адресации 
+                        }
                     }
                 }else{
                     String[] split = arguments.split(" ");
@@ -404,7 +454,7 @@ public class Assembler {
                                     code += 1;//непосредственная
                                     short[] addr = Utils.intToShortArray4(Integer.parseInt(arguments));
                                     addr[0] = code;
-                                    relocationTable.add(currentLine.getAddress()); //добовляем в таблицу релокации все прямые адресации
+                                    relocationTable.put(currentLine.getAddress(),""); //добовляем в таблицу релокации все прямые адресации
                                     currentLine.setObj(addr);
                                 }
                             case 2 -> {
@@ -464,11 +514,13 @@ public class Assembler {
             case "resw" -> {
                 return Integer.parseInt(arguments)*WORD_LENGHT;
             }
+            case "extref", "extdef"-> {return 0;}
             default -> {
                 throw new RuntimeException("nodef");
             }
         }
     }
+
 
     public Operation getOperationByName(String oper){
         if(operationsCodes.isEmpty()) return null;

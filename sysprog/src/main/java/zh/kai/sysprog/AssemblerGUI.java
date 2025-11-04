@@ -33,6 +33,7 @@ public class AssemblerGUI extends JFrame {
 
     // --- Колонка 3: Второй проход ---
     private DefaultTableModel relTabModel;
+    private DefaultTableModel extTabModel;
     private JTextArea objectCodeArea;
     private JTextArea errorsPass2Area;
 
@@ -141,7 +142,7 @@ public class AssemblerGUI extends JFrame {
         panel.add(auxScrollPane);
 
         // 2.2. Таблица символических имен (JTable)
-        String[] symTabColumns = {"Имя", "Адрес (hex)"};
+        String[] symTabColumns = {"Имя", "Адрес","Внеш."};
         symTabModel = new DefaultTableModel(symTabColumns, 0) {
              @Override
             public boolean isCellEditable(int row, int column) {
@@ -169,7 +170,7 @@ public class AssemblerGUI extends JFrame {
         panel.setBorder(new TitledBorder("3. Второй проход"));
 
         // 2.2. Таблица символических имен (JTable)
-        String[] relTabColumns = {"Адрес (hex)"};
+        String[] relTabColumns = {"Адрес","Внеш. имя"};
         relTabModel = new DefaultTableModel(relTabColumns, 0) {
              @Override
             public boolean isCellEditable(int row, int column) {
@@ -177,9 +178,26 @@ public class AssemblerGUI extends JFrame {
             }
         };
         JTable relTable = new JTable(relTabModel);
-        JScrollPane symTabScrollPane = new JScrollPane(relTable);
-        symTabScrollPane.setBorder(new TitledBorder("Таблица перемещений"));
-        panel.add(symTabScrollPane);
+        JScrollPane relTabScrollPane = new JScrollPane(relTable);
+       relTabScrollPane.setBorder(new TitledBorder("Таблица перемещений"));
+
+        String[] extTabColumns = {"Внеш. имя","Адрес"};
+        extTabModel = new DefaultTableModel(relTabColumns, 0) {
+             @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // Неизменяемая
+            }
+        };
+        JTable extTable = new JTable(extTabModel);
+        JScrollPane extTabScrollPane = new JScrollPane(extTable);
+        extTabScrollPane.setBorder(new TitledBorder("Таблица перемещений"));
+
+        JPanel relAndExtData = new JPanel(new GridLayout(1, 2, 0, 10));
+
+        relAndExtData.add(relTabScrollPane);
+        relAndExtData.add(extTabScrollPane);
+
+        panel.add(relAndExtData);
 
         // 3.1. Объектный код (JTextArea)
         objectCodeArea = new JTextArea();
@@ -262,6 +280,7 @@ public class AssemblerGUI extends JFrame {
             auxTableModel.setRowCount(0);
             symTabModel.setRowCount(0);
             relTabModel.setRowCount(0);
+            extTabModel.setRowCount(0);
             errorsPass1Area.setText("");
             errorsPass2Area.setText("");
             objectCodeArea.setText("");
@@ -300,7 +319,8 @@ public class AssemblerGUI extends JFrame {
                     .forEach(entry -> {
                         symTabModel.addRow(new Object[]{
                             entry.getKey(),
-                            String.format("%06X", entry.getValue().getAddress())
+                            String.format("%06X", entry.getValue().getAddress()),
+                            asm.getExternalLinks().keySet().contains(entry.getKey())?1:0
                         });
                     });
                     
@@ -325,6 +345,7 @@ public class AssemblerGUI extends JFrame {
         public void actionPerformed(ActionEvent e) {
              // 1. Очистка предыдущих результатов второго прохода
             relTabModel.setRowCount(0);
+            extTabModel.setRowCount(0);
             errorsPass2Area.setText("");
             objectCodeArea.setText("");
             
@@ -346,12 +367,25 @@ public class AssemblerGUI extends JFrame {
                 
                 if (asm.secondPass()) {
                     // Успех - заполняем объектный код
-                    asm.getRelocationTable().stream()
+                    asm.getRelocationTable().entrySet().stream().sorted(
+                        Map.Entry.comparingByKey(Comparator.comparing(Address::getAddress))
+                    )
                     .forEach(entry -> {
                         relTabModel.addRow(new Object[]{
-                            String.format("%06X", entry.getAddress())
+                            String.format("%06X", entry.getKey().getAddress()),
+                            (entry.getValue()!=null)?entry.getValue():""
                         });
                     });
+
+                    asm.getExternalLinks().entrySet().stream().sorted(
+                        Map.Entry.comparingByValue(Comparator.comparing(Address::getAddress))
+                    ).forEach(entry -> {
+                        extTabModel.addRow(new Object[]{
+                            entry.getKey(),
+                            String.format("%06X", entry.getValue().getAddress())
+                        });
+                    });
+
 
                     StringBuilder objCode = new StringBuilder();
                     for (CodeLine cl : asm.getCodeLines()) {
