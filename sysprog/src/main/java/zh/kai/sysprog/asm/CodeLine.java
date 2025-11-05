@@ -1,5 +1,7 @@
 package zh.kai.sysprog.asm;
 
+import javax.swing.text.Utilities;
+
 import lombok.Getter;
 import lombok.Setter;
 import zh.kai.sysprog.Assembler;
@@ -49,6 +51,8 @@ public class CodeLine {
                         a = a.substring(1, a.length()-1);
                         if(a.startsWith(".")){
                             len+=Assembler.WORD_LENGHT;
+                        }else if (Utils.isIntegerRegex(a)) {
+                            len += Assembler.WORD_LENGHT;
                         }
                     }else{
                         Errors.addPart1("Некорректный аргумент");
@@ -90,6 +94,14 @@ public class CodeLine {
         }
         Errors.addPart1("Неверная длина команды: " + toString());
         return false;
+    }
+
+    public boolean isHead(){
+        return "start".equals(operationName);
+    }
+
+    public boolean isEnd(){
+        return "end".equals(operationName);
     }
 
     @Override

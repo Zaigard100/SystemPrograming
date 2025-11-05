@@ -173,7 +173,7 @@ public class Assembler {
             header.setArguments("0");
             lc = 0;
         }
-        if(lc < 0){
+        if(lc != 0){
             Errors.addPart1("Не корректнаяя точка старта");
             hasError = true;
         }
@@ -468,6 +468,31 @@ public class Assembler {
                 throw new RuntimeException("nodef");
             }
         }
+    }
+
+    public String getAuxiliaryTable(){
+        StringBuilder sb = new StringBuilder();
+        for(CodeLine cl:getCodeLines()){
+            sb.append(cl.toAdditionString()).append("\n");
+        }
+        return sb.toString().trim();
+    }
+
+    public String getObjText(){
+        StringBuilder sb = new StringBuilder();
+        for(CodeLine cl:getCodeLines()){
+            if(cl.isHead()){
+                sb.append(cl.toObjString()).append("\n");
+            }else if(cl.isEnd()){
+                for(Address adr: relocationTable){
+                    sb.append(String.format("M %06X", adr.getAddress())).append("\n");
+                }
+                sb.append(cl.toObjString()).append("\n");
+            }else{
+                sb.append(cl.toObjString()).append("\n");
+            }
+        }
+        return sb.toString().trim();
     }
 
     public Operation getOperationByName(String oper){

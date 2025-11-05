@@ -15,7 +15,7 @@ public class Main {
     .pstart
         lda [.one]
         mov r1 r2
-        lda [.two]
+        lda .two
         add r1 r2
         sta [.res]
         int 29
@@ -84,9 +84,7 @@ public class Main {
 
         if(asm.firstPass()){
             System.out.println("Вспомогательная таблица:");
-            for(CodeLine cl:asm.getCodeLines()){
-                System.out.println(cl.toAdditionString());
-            }
+            System.out.println(asm.getAuxiliaryTable());
             System.out.println("_______________________");
             
             System.out.println("Таблица символических имен:");
@@ -112,9 +110,7 @@ public class Main {
                 }
                 System.out.println("_______________________");
                 System.out.println("Обьектный код:");
-                for(CodeLine cl:asm.getCodeLines()){
-                    System.out.println(cl.toObjString());
-                }
+                System.out.println(asm.getObjText());
                 System.out.println("_______________________");
             }else{
                 System.out.println(Errors.getPart2());
