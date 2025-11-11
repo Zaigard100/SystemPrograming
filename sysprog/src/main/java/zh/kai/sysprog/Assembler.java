@@ -1,5 +1,8 @@
 package zh.kai.sysprog;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -282,6 +285,15 @@ public class Assembler {
         return !hasError;
     }
 
+    public void saveToFile(){
+        String filename = codeLines.getFirst().getLabel().substring(1)+".obj";
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
+            writer.write(getObjText()); // Запись текста в файл
+            System.out.println("Текст успешно сохранен в файл: " + filename);
+        } catch (IOException e) {
+            System.err.println("Ошибка при записи в файл: " + e.getMessage());
+        }
+    }
 
     public String getAuxiliaryTable(){
         StringBuilder sb = new StringBuilder();

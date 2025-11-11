@@ -210,6 +210,7 @@ public class Main {
                 System.out.println("Обьектный код:");
                 System.out.println(asm.getObjText());
                 System.out.println("_______________________");
+                asm.saveToFile();
             }else{
                 System.out.println(Errors.getPart2());
             }

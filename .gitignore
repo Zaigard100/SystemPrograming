@@ -20,3 +20,5 @@ sysprog/target/classes/zh/kai/sysprog/asm/Operation.class
 sysprog/target/classes/zh/kai/sysprog/asm/Segment.class
 sysprog/target/classes/zh/kai/sysprog/utils/Pair.class
 sysprog/target/classes/zh/kai/sysprog/utils/Utils.class
+.vscode/
+*.obj

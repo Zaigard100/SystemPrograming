@@ -207,6 +207,7 @@ public class AssemblerGUI extends JFrame {
         objectCodeArea.setFont(new Font("Consolas", Font.PLAIN, 14));
         JScrollPane objCodeScrollPane = new JScrollPane(objectCodeArea);
         objCodeScrollPane.setBorder(new TitledBorder("Объектный код"));
+
         panel.add(objCodeScrollPane);
 
         // 3.2. Ошибки второго прохода (JTextArea)
