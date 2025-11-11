@@ -97,6 +97,10 @@ public class CodeLine {
     public boolean isHead(){
         return "start".equals(operationName);
     }
+    
+    public boolean isSegment(){
+        return "segment".equals(operationName);
+    }
 
     public boolean isEnd(){
         return "end".equals(operationName);
@@ -120,10 +124,11 @@ public class CodeLine {
 
     public String toAdditionString(){
         StringBuilder sb = new StringBuilder();
+        if(isHead() || isSegment())sb.append(label).append(" ");
         if(operationName!=null) sb.append(operationName).append(" ");
         if(arguments!=null) sb.append(arguments).append(" ");
-        if(address == null){
-            return String.format(sb.toString());
+        if(isHead() || isSegment()){
+            return sb.toString();
         }
         return String.format("%06X %s", address.getAddress(),sb.toString());
     }
@@ -131,7 +136,7 @@ public class CodeLine {
     public String toObjString(){
         StringBuilder sb = new StringBuilder();
         switch (operationName) {
-            case "start" -> {
+            case "start","segment"-> {
                 sb.append("H ").append(label).append(" ");
                 int i = 0;
                 for(short b:obj){

@@ -4,6 +4,7 @@ import zh.kai.sysprog.Assembler.AdderssationType;
 import zh.kai.sysprog.asm.Address;
 import zh.kai.sysprog.asm.CodeLine;
 import zh.kai.sysprog.asm.Errors;
+import zh.kai.sysprog.asm.Segment;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -14,6 +15,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Comparator;
 import java.util.Map;
+
 
 public class AssemblerGUI extends JFrame {
 
@@ -142,7 +144,7 @@ public class AssemblerGUI extends JFrame {
         panel.add(auxScrollPane);
 
         // 2.2. Таблица символических имен (JTable)
-        String[] symTabColumns = {"Имя", "Адрес","Внеш."};
+        String[] symTabColumns = {"Имя", "Адрес","Внеш.","Располож."};
         symTabModel = new DefaultTableModel(symTabColumns, 0) {
              @Override
             public boolean isCellEditable(int row, int column) {
@@ -170,7 +172,7 @@ public class AssemblerGUI extends JFrame {
         panel.setBorder(new TitledBorder("3. Второй проход"));
 
         // 2.2. Таблица символических имен (JTable)
-        String[] relTabColumns = {"Адрес","Внеш. имя"};
+        String[] relTabColumns = {"Адрес","Внеш. имя","Располож."};
         relTabModel = new DefaultTableModel(relTabColumns, 0) {
              @Override
             public boolean isCellEditable(int row, int column) {
@@ -181,7 +183,7 @@ public class AssemblerGUI extends JFrame {
         JScrollPane relTabScrollPane = new JScrollPane(relTable);
        relTabScrollPane.setBorder(new TitledBorder("Таблица перемещений"));
 
-        String[] extTabColumns = {"Внеш. имя","Адрес"};
+        String[] extTabColumns = {"Внеш. имя","Адрес","Располож."};
         extTabModel = new DefaultTableModel(relTabColumns, 0) {
              @Override
             public boolean isCellEditable(int row, int column) {
@@ -295,34 +297,50 @@ public class AssemblerGUI extends JFrame {
                     
                     // Вспомогательная таблица
                     for (CodeLine cl : asm.getCodeLines()) {
-                        if("start".equals(cl.getOperationName())){
+                        String[] split = cl.toAdditionString().split(" ", 2);
+
+                        auxTableModel.addRow(new Object[]{
+                            split[0],
+                            split[1]
+                        });
+                    }
+                    for (Segment s : asm.getSegments()) {
+                        for (CodeLine cl : s.getCodeLines()) {
+                            String[] split = cl.toAdditionString().split(" ", 2);
+
                             auxTableModel.addRow(new Object[]{
-                                String.format("%s", cl.getLabel()),
-                                cl.toAdditionString()
-                            });
-                        }else{
-                            auxTableModel.addRow(new Object[]{
-                                String.format("%06X", cl.getAddress().getAddress()),
-                                cl.toAdditionString().split(" ",2)[1]
+                                split[0],
+                                split[1]
                             });
                         }
                     }
 
                     asm.getSymTab().entrySet().stream()
-                    // 1. Сортируем по адресу.
-                    // Map.Entry.comparingByValue() позволяет сравнивать по значению (Address).
-                    // Comparator.comparing(Address::getAddress) указывает, что нужно сравнивать результат Address.getAddress().
                     .sorted(Map.Entry.comparingByValue(
                         Comparator.comparing(Address::getAddress)
                     ))
-                    // 2. Добавляем отсортированные элементы в модель.
                     .forEach(entry -> {
                         symTabModel.addRow(new Object[]{
                             entry.getKey(),
                             String.format("%06X", entry.getValue().getAddress()),
-                            asm.getExternalLinks().keySet().contains(entry.getKey())?1:0
+                            asm.getExternalLinks().keySet().contains(entry.getKey())?1:0,
+                            asm.getCodeLines().getFirst().getLabel()
                         });
                     });
+                    for (Segment s : asm.getSegments()) {
+                        s.getSymTab().entrySet().stream()
+                        .sorted(Map.Entry.comparingByValue(
+                            Comparator.comparing(Address::getAddress)
+                        ))
+                        .forEach(entry -> {
+                            symTabModel.addRow(new Object[]{
+                                entry.getKey(),
+                                String.format("%06X", entry.getValue().getAddress()),
+                                s.getExternalLinks().keySet().contains(entry.getKey())?1:0,
+                                s.getName()
+                            });
+                        });
+                    }
                     
                     JOptionPane.showMessageDialog(AssemblerGUI.this, "Первый проход завершен успешно.", "Успех", JOptionPane.INFORMATION_MESSAGE);
 
@@ -373,7 +391,8 @@ public class AssemblerGUI extends JFrame {
                     .forEach(entry -> {
                         relTabModel.addRow(new Object[]{
                             String.format("%06X", entry.getKey().getAddress()),
-                            (entry.getValue()!=null)?entry.getValue():""
+                            (entry.getValue()!=null)?entry.getValue():"",
+                            asm.getCodeLines().getFirst().getLabel()
                         });
                     });
 
@@ -382,10 +401,34 @@ public class AssemblerGUI extends JFrame {
                     ).forEach(entry -> {
                         extTabModel.addRow(new Object[]{
                             entry.getKey(),
-                            String.format("%06X", entry.getValue().getAddress())
+                            String.format("%06X", entry.getValue().getAddress()),
+                            asm.getCodeLines().getFirst().getLabel()
                         });
                     });
                     
+                    for(Segment s:asm.getSegments()){
+                        s.getRelocationTable().entrySet().stream().sorted(
+                            Map.Entry.comparingByKey(Comparator.comparing(Address::getAddress))
+                        )
+                        .forEach(entry -> {
+                            relTabModel.addRow(new Object[]{
+                                String.format("%06X", entry.getKey().getAddress()),
+                                (entry.getValue()!=null)?entry.getValue():"",
+                                s.getName()
+                            });
+                        });
+
+                        s.getExternalLinks().entrySet().stream().sorted(
+                            Map.Entry.comparingByValue(Comparator.comparing(Address::getAddress))
+                        ).forEach(entry -> {
+                            extTabModel.addRow(new Object[]{
+                                entry.getKey(),
+                                String.format("%06X", entry.getValue().getAddress()),
+                                s.getName()
+                            });
+                        });
+                    }
+
                     objectCodeArea.setText(asm.getObjText());
                     JOptionPane.showMessageDialog(AssemblerGUI.this, "Второй проход завершен успешно.", "Успех", JOptionPane.INFORMATION_MESSAGE);
                 } else {

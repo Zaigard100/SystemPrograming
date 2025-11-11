@@ -7,6 +7,7 @@ import zh.kai.sysprog.asm.Address;
 import zh.kai.sysprog.asm.CodeLine;
 import zh.kai.sysprog.asm.Errors;
 import zh.kai.sysprog.asm.Operation;
+import zh.kai.sysprog.asm.Segment;
 
 public class Main {
 
@@ -38,7 +39,7 @@ public class Main {
     .s1 segment
         extdef .key
         extref .res
-        lda .res
+    .ff lda .res
         int 29
     .key byte C"KEYGEN"
     end .s1
@@ -46,9 +47,9 @@ public class Main {
     .s2 segment
         extdef .hash
         extref .data
-        sda .data
+    .ff sta .data
         add r14 r8
-    .hash byte byte X"F32GAFB5A049"
+    .hash byte X"F32"
     end .s2
     
         end .prog
@@ -69,7 +70,8 @@ public class Main {
 
         Assembler asm = new Assembler(text,opcod,Assembler.AdderssationType.CHAINED);
         asm.init();
-
+        asm.parseCode(text);
+        asm.parseOperationsCodes(opcod);
         System.out.println("Тип адресации: "+asm.getType());
 
         System.out.println("Исходный текст:");
@@ -91,6 +93,27 @@ public class Main {
                     a2,
                     a3
                 );
+            }
+            for(Segment s: asm.getSegments()){
+                for(CodeLine cl:s.getCodeLines()){
+                String a1 = cl.getLabel();
+                if(a1 == null){
+                    a1 = "";
+                }
+                String a2 = cl.getOperationName();
+                if(a2 == null){
+                    a2 = "";
+                }
+                String a3 = cl.getArguments();
+                if(a3 == null){
+                    a3 = "";
+                }
+                System.out.printf( "%-12s %s %s\n",
+                    a1,
+                    a2,
+                    a3
+                );
+            }
             }
         System.out.println("_______________________");
 
@@ -115,16 +138,33 @@ public class Main {
             asm.getSymTab().entrySet().stream()
                 // 1. Сортируем по адресу (значению в Map.Entry)
                 .sorted(Map.Entry.comparingByValue(
-                    Comparator.comparing(s -> s.getAddress())
+                    Comparator.comparing(a -> a.getAddress())
                 ))
                 // 2. Выводим результат в нужном формате
                 .forEach(entry -> 
-                    System.out.printf("%-12s %06X %s\n",
+                    System.out.printf("%-12s %06X %s %s\n",
                         entry.getKey(), 
                         entry.getValue().getAddress(),
-                        asm.getExternalLinks().keySet().contains(entry.getKey())?1:0
+                        asm.getExternalLinks().keySet().contains(entry.getKey())?1:0,
+                        asm.getCodeLines().getFirst().getLabel()
                     )
             );
+            for(Segment s:asm.getSegments()){
+                s.getSymTab().entrySet().stream()
+                    // 1. Сортируем по адресу (значению в Map.Entry)
+                    .sorted(Map.Entry.comparingByValue(
+                        Comparator.comparing(a -> a.getAddress())
+                    ))
+                    // 2. Выводим результат в нужном формате
+                    .forEach(entry -> 
+                        System.out.printf("%-12s %06X %s %s\n",
+                            entry.getKey(), 
+                            entry.getValue().getAddress(),
+                            asm.getExternalLinks().keySet().contains(entry.getKey())?1:0,
+                            s.getName()
+                        )
+                );
+            }
             System.out.println("_______________________");
 
             System.out.println("\tВторой проход:");
@@ -132,21 +172,40 @@ public class Main {
 
                 System.out.println("Таблица перемещений:");
                 for(Address adr:asm.getRelocationTable().keySet()){
-                    System.out.printf("%06X %s\n",
+                    System.out.printf("%06X %-15s %s\n",
                         adr.getAddress(),
-                        asm.getRelocationTable().get(adr)
+                        asm.getRelocationTable().get(adr),
+                        asm.getCodeLines().getFirst().getLabel()
                     );
+                }
+                for(Segment s:asm.getSegments()){
+                    for(Address adr:s.getRelocationTable().keySet()){
+                        System.out.printf("%06X %-15s %s\n",
+                            adr.getAddress(),
+                            s.getRelocationTable().get(adr),
+                            s.getName()
+                        );
+                    }
                 }
                 System.out.println("_______________________");
 
                 System.out.println("Таблица внешних ссылок:");
-                for(String s:asm.getExternalLinks().keySet()){
-                    System.out.printf("%-12s %06X\n",
-                        s,
-                        asm.getExternalLinks().get(s).getAddress()
+                for(String l:asm.getExternalLinks().keySet()){
+                    System.out.printf("%-12s %06X %s\n",
+                        l,
+                        asm.getExternalLinks().get(l).getAddress(),
+                        asm.getCodeLines().getFirst().getLabel()
                     );
                 }
-
+                for(Segment s:asm.getSegments()){
+                    for(String l:s.getExternalLinks().keySet()){
+                        System.out.printf("%-12s %06X %s\n",
+                            l,
+                            s.getExternalLinks().get(l).getAddress(),
+                            s.getName()
+                        );
+                    }
+                }
                 System.out.println("_______________________");
                 System.out.println("Обьектный код:");
                 System.out.println(asm.getObjText());
