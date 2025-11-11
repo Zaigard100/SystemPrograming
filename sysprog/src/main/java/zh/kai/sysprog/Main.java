@@ -21,6 +21,7 @@ public class Main {
         lda .two
         add r1 r2
         sta [.res]
+        lda .key
         int 29
         clr
         jmp [.pstart]
@@ -33,7 +34,24 @@ public class Main {
     .two byte 2
     .res word 34
     .hello byte C"Hello"
-        end
+
+    .s1 segment
+        extdef .key
+        extref .res
+        lda .res
+        int 29
+    .key byte C"KEYGEN"
+    end .s1
+
+    .s2 segment
+        extdef .hash
+        extref .data
+        sda .data
+        add r14 r8
+    .hash byte byte X"F32GAFB5A049"
+    end .s2
+    
+        end .prog
     """;
 
     static String opcod = """
@@ -90,9 +108,7 @@ public class Main {
 
         if(asm.firstPass()){
             System.out.println("Вспомогательная таблица:");
-            for(CodeLine cl:asm.getCodeLines()){
-                System.out.println(cl.toAdditionString());
-            }
+            System.out.println(asm.getAuxiliaryTable());
             System.out.println("_______________________");
             
             System.out.println("Таблица символических имен:");
@@ -133,9 +149,7 @@ public class Main {
 
                 System.out.println("_______________________");
                 System.out.println("Обьектный код:");
-                for(CodeLine cl:asm.getCodeLines()){
-                    System.out.println(cl.toObjString());
-                }
+                System.out.println(asm.getObjText());
                 System.out.println("_______________________");
             }else{
                 System.out.println(Errors.getPart2());

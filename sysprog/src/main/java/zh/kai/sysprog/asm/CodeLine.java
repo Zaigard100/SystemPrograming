@@ -49,6 +49,8 @@ public class CodeLine {
                         a = a.substring(1, a.length()-1);
                         if(a.startsWith(".")){
                             len+=Assembler.WORD_LENGHT;
+                        }else if (Utils.isIntegerRegex(a)) {
+                            len += Assembler.WORD_LENGHT;
                         }
                     }else{
                         Errors.addPart1("Некорректный аргумент");
@@ -90,6 +92,21 @@ public class CodeLine {
         }
         Errors.addPart1("Неверная длина команды: " + toString());
         return false;
+    }
+
+    public boolean isHead(){
+        return "start".equals(operationName);
+    }
+
+    public boolean isEnd(){
+        return "end".equals(operationName);
+    }
+
+    public boolean isExtref(){
+        return operationName.equals("extref");
+    }
+    public boolean isExtdef(){
+        return operationName.equals("extdef");
     }
 
     @Override

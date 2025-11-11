@@ -6,12 +6,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
 
+import javax.swing.text.Utilities;
+
 import lombok.Getter;
 import lombok.Setter;
 import zh.kai.sysprog.asm.Address;
 import zh.kai.sysprog.asm.CodeLine;
 import zh.kai.sysprog.asm.Errors;
 import zh.kai.sysprog.asm.Operation;
+import zh.kai.sysprog.asm.Segment;
 import zh.kai.sysprog.utils.Utils;
 
 @Getter
@@ -47,6 +50,7 @@ public class Assembler {
     private HashMap<Address,String> relocationTable;
     private HashMap<String,Address> externalLinks;
     private ArrayList<String> externalSymbols;
+    private ArrayList<Segment> segments;
 
     private AdderssationType type;
     private boolean isFirstPass = false;
@@ -58,7 +62,7 @@ public class Assembler {
 
     public static HashSet<String> dirrectives = new HashSet<>(List.of(
         "start","end",
-        "extdef","extref",
+        "extdef","extref","segment",
         "r0","r1","r2","r3","r4","r5","r6","r7",
         "r8","r9","r10","r11","r12","r13","r14","r15",
         "resb","resw","byte","word"
@@ -77,15 +81,16 @@ public class Assembler {
     }
 
     public void init(String code,String operationCode){
-        parseOperationsCodes(operationCode);
-        parseCode(code);
+        sourceCode = code;
+        operationCodeTable = operationCode;
         symTab = new HashMap<>();
         relocationTable = new HashMap<>();
         externalLinks = new HashMap<>();
         externalSymbols = new ArrayList<>();
+        segments = new ArrayList<>();
     }
 
-    public void parseOperationsCodes(String text){
+    public boolean  parseOperationsCodes(String text){
         operationsCodes = new ArrayList<>();
         String line = "";
         try (Scanner sc = new Scanner(text)) {
@@ -94,7 +99,7 @@ public class Assembler {
                 String[] split = line.split(" ", 3);
                 if(split.length != 3){
                     Errors.addPart1("Неверный формат кода операции: "+ line);
-                    continue;
+                    return false;
                 }
                 String name = split[0];
                 short c = Short.parseShort(split[1]);
@@ -102,63 +107,106 @@ public class Assembler {
 
                 if(lenght == 3 || lenght > 4){//добавлена длина команды 3 только для относительной адресации
                     Errors.addPart1("Неправильная длина команды допускаются только до 4: "+ line);
+                    return false;
                 }
                 if(dirrectives.contains(name)){
                     Errors.addPart1(name + " зарезервировано: "+ line);
-                    continue;
+                    return false;
                 }
                 if(getOperationByName(name)!=null){
                     Errors.addPart1("Дубликат имени операции: "+ line);
-                    continue;
+                    return false;
                 }
                 if(c > 64 && c >= 0){
                     Errors.addPart1("Диапозон допустимых кодов операций от 0 до 63: "+ line);
-                    continue;
+                    return false;
                 }
                 if(getOperationByCode(c)!=null){
                     Errors.addPart1("Дубликат кода операции: "+ line);
-                    continue;
+                    return false;
                 }
                 
                 operationsCodes.add(new Operation(name, c, lenght));
             }
         }catch(NumberFormatException e){
              Errors.addPart1("Неверный формат кода операции: "+ line);
+             return false;
         }
-
+        return true;
     }
 
-    public void parseCode(String text){
+    public boolean parseCode(String text){
+        Segment currentSegment = null;
         codeLines = new ArrayList<>();
         try (Scanner sc = new Scanner(text)) {
             while (sc.hasNext()) {
-               String line = sc.nextLine().trim();
-               if(line.isBlank()) continue;
-               String[] split;
-               if(line.startsWith(".")){
-                    split = line.split(" ",3);
+                String line = sc.nextLine().trim();
+                if(line.isBlank()) continue;
+                String[] split;
+                if(line.startsWith(".")){
+                        split = line.split(" ",3);
+                        switch (split.length) {
+                        case 3 -> codeLines.add(new CodeLine(split[0], split[1],split[2]));
+                        case 2 -> codeLines.add(new CodeLine(split[0], split[1], null)); //без аргументов
+                        case 1 -> codeLines.add(new CodeLine(split[0], null, null));//строка метка
+                    }
+                }else{
+                        split = line.split(" ",2);
                     switch (split.length) {
-                       case 3 -> codeLines.add(new CodeLine(split[0], split[1],split[2]));
-                       case 2 -> codeLines.add(new CodeLine(split[0], split[1], null)); //без аргументов
-                       case 1 -> codeLines.add(new CodeLine(split[0], null, null));//строка метка
-                   }
-               }else{
-                    split = line.split(" ",2);
-                   switch (split.length) {
-                       case 2 -> codeLines.add(new CodeLine(null, split[0],split[1]));
-                       case 1 -> codeLines.add(new CodeLine(null, split[0], null)); //без аргументов
-                   }
-               }
-               
-               CodeLine last = codeLines.getLast();
-               if("end".equals(last.getOperationName())){
-                return;
-               }
+                        case 2 -> codeLines.add(new CodeLine(null, split[0],split[1]));
+                        case 1 -> codeLines.add(new CodeLine(null, split[0], null)); //без аргументов
+                    }
+                }
+                
+                CodeLine last = codeLines.getLast();
+
+                if(currentSegment == null){
+                    String programName = codeLines.getFirst().getLabel();
+                    if("end".equals(last.getOperationName())){
+                        if(last.getArguments() == null){
+                            Errors.addPart1("Некорректный формат end");
+                        }
+                        if(last.getArguments().equals(programName)){
+                            return true;
+                        }else{
+                            Errors.addPart1("Ожидался end "+codeLines.getFirst().getLabel());
+                            return false;
+                        }
+                    }else if ("segment".equals(last.getOperationName())) {
+                        if(last.getLabel() == null){
+                            Errors.addPart1("некорректный формат сегмента");
+                            return false;
+                        }
+                        currentSegment = new Segment(last.getLabel());
+                        currentSegment.getCodeLines().add(last);
+                        codeLines.removeLast();
+                    }
+                }else{
+                    String segmentName = currentSegment.getName();
+                    currentSegment.getCodeLines().add(last);
+                    codeLines.removeLast();
+                    if("end".equals(last.getOperationName())){
+                        if(last.getArguments().equals(segmentName)){
+                            segments.add(currentSegment);
+                            currentSegment = null;
+                        }
+                    }else if ("segment".equals(last.getOperationName())) {
+                        Errors.addPart1("Сегмент "+currentSegment.getName()+" не закрыт");
+                        return false;
+                    }
+                }
             }
         }
+        return false;
     }
 
+    
+
     public boolean firstPass(){
+
+        if(!parseOperationsCodes(operationCodeTable)) return false;
+        if(!parseCode(sourceCode)) return false;
+
         boolean hasError = false;
         CodeLine header = codeLines.get(0);
         if(!header.getOperationName().equals("start")){
@@ -178,12 +226,14 @@ public class Assembler {
             header.setArguments("0");
             lc = 0;
         }
-        if(lc < 0){
+        if(lc != 0){
             Errors.addPart1("Не корректнаяя точка старта");
             hasError = true;
         }
-
-        for (int i = 1; i < codeLines.size(); i++) {
+        return firstPass(lc,hasError,header);
+    }
+    public boolean firstPass(int lc,boolean hasError,CodeLine header){
+        for (int i = 1; i < codeLines.size(); i++) {//TODO переместить в Utils
             CodeLine currentLine = codeLines.get(i);
 
             if(!(lc<WORD_MAX)){
@@ -230,16 +280,23 @@ public class Assembler {
                             Errors.addPart1("Дирректива "+operationName+" не может быть использована лишь в начале программы: "+ currentLine);
                             return false;
                         }
-                        case "end" -> {
+                        case "segment" -> {
 
-                            for(String s:externalLinks.keySet()){
-                                if(externalLinks.get(s)==null){
-                                    Errors.addPart1("Ненайдена метка из extdef: "+s);
-                                    return  false;
+                        }
+                        case "end" -> {
+                            if(currentLine.getArguments().equals(header.getLabel())){
+                                for(String s:externalLinks.keySet()){
+                                    if(externalLinks.get(s)==null){
+                                        Errors.addPart1("Ненайдена метка из extdef: "+s);
+                                        return  false;
+                                    }
                                 }
-                            }
-                            isFirstPass = !hasError;
-                            return !hasError;
+                                isFirstPass = !hasError;
+                                return !hasError;
+                            }else{
+                                Errors.addPart1("Ожидается end "+header.getLabel());
+                                return false;
+                            }                        
                         }
                         case "extref" -> {
                             for(String s: currentLine.getArguments().split(" ")){
@@ -250,15 +307,11 @@ public class Assembler {
                                 }
                                 externalSymbols.add(s.trim());
                             }
-                            codeLines.remove(i);
-                            i--;
                         }
                         case "extdef" -> {
                             for(String s: currentLine.getArguments().split(" ")){
                                 externalLinks.put(s.trim(), null);
                             }
-                            codeLines.remove(i);
-                           i--;
                         }
                     }
                     try{
@@ -292,8 +345,9 @@ public class Assembler {
                 lc += lenght;
             }
         }
-        if(!codeLines.getLast().getOperationName().equals("end")){
-            Errors.addPart1("Ожидается end");
+        
+        if(!codeLines.getLast().getOperationName().equals("end") || !codeLines.getLast().getArguments().equals(header.getLabel())){
+            Errors.addPart1("Ожидается end "+header.getLabel());
             return false;
         }
 
@@ -307,7 +361,7 @@ public class Assembler {
         boolean hasError = false;
         CodeLine header = codeLines.get(0);
 
-        for (int i = 1; i < codeLines.size(); i++) {
+        for (int i = 1; i < codeLines.size(); i++) {//TODO переместить в Utils
             CodeLine currentLine = codeLines.get(i);
             String operationName = currentLine.getOperationName();
             if(dirrectives.contains(operationName)){
@@ -316,16 +370,19 @@ public class Assembler {
                         String arguments = currentLine.getArguments();
                         int headerArg = Integer.parseInt(header.getArguments());
                         if(arguments != null){
-                            int start;
+                            int start = 0;
                             try{
-                                start = Integer.parseInt(arguments);
-                                if(start >= headerArg && start<= currentLine.getAddress().getAddress()){
-                                    short[] addres = Utils.intToShortArray4(start);
-                                    currentLine.setObj(new short[]{addres[1],addres[2],addres[3]});
-                                }else{
-                                    Errors.addPart2("Некорректный аргумент end адрес должен находится в диапозоне кода");
-                                    hasError = true;
+                                String[] split = arguments.trim().split(" ");
+                                if(split.length == 2){
+                                    arguments = split[1];
+                                    if(Utils.isIntegerRegex(arguments)) start = Integer.parseInt(arguments);
+                                    else{
+                                        Errors.addPart2("Некорректный аргумент end ожидается название программы и адрес");
+                                        return false;
+                                    }
                                 }
+                                short[] addres = Utils.intToShortArray4(start);
+                                currentLine.setObj(new short[]{addres[1],addres[2],addres[3]});
                             }catch(NumberFormatException e){
                                 Errors.addPart2("Некорректный аргумент end ожидается адрес");
                                 return false;
@@ -484,9 +541,10 @@ public class Assembler {
 
     private int dirrectiveLenght(CodeLine currentLine) {
         String operationName = currentLine.getOperationName();
-        String arguments = currentLine.getArguments().trim();
+        String arguments = currentLine.getArguments();
         switch (operationName) {
             case "word" -> {
+                arguments = arguments.trim();
                 if(Integer.parseInt(arguments)<WORD_MAX &&Integer.parseInt(arguments)>=0){
                     return WORD_LENGHT;
                 }
@@ -494,6 +552,7 @@ public class Assembler {
                 
             }
             case "byte" -> {
+                arguments = arguments.trim();
                 if(arguments.startsWith("C\"") && arguments.endsWith("\"")){
                     return arguments.length()-3;
                 }
@@ -514,13 +573,49 @@ public class Assembler {
             case "resw" -> {
                 return Integer.parseInt(arguments)*WORD_LENGHT;
             }
-            case "extref", "extdef"-> {return 0;}
+            case "extref", "extdef","segment"-> {return 0;}
             default -> {
                 throw new RuntimeException("nodef");
             }
         }
     }
 
+
+    public String getAuxiliaryTable(){
+        StringBuilder sb = new StringBuilder();
+        for(CodeLine cl:getCodeLines()){
+            sb.append(cl.toAdditionString()).append("\n");
+        }
+        return sb.toString().trim();
+    }
+
+    public String getObjText(){
+        StringBuilder sb = new StringBuilder();
+        for(CodeLine cl:getCodeLines()){
+            if(cl.isHead()){
+                sb.append(cl.toObjString()).append("\n");
+            }else if (cl.isExtdef()) {
+                String[] defs = cl.getArguments().trim().split(" ");
+                for(String s:defs){
+                    sb.append(String.format("D %s %06X \n",s,symTab.get(s).getAddress()));
+                }
+            }else if (cl.isExtref()) {
+                String[] defs = cl.getArguments().trim().split(" ");
+                for(String s:defs){
+                    sb.append("R ").append(s).append("\n");
+                }
+            }else if(cl.isEnd()){
+                for(Address adr: relocationTable.keySet()){
+                    String format = String.format("M %06X %s", adr.getAddress(),relocationTable.get(adr));
+                    sb.append(format).append("\n");
+                }
+                sb.append(cl.toObjString()).append("\n");
+            }else{
+                sb.append(cl.toObjString()).append("\n");
+            }
+        }
+        return sb.toString().trim();
+    }
 
     public Operation getOperationByName(String oper){
         if(operationsCodes.isEmpty()) return null;

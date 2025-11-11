@@ -385,13 +385,8 @@ public class AssemblerGUI extends JFrame {
                             String.format("%06X", entry.getValue().getAddress())
                         });
                     });
-
-
-                    StringBuilder objCode = new StringBuilder();
-                    for (CodeLine cl : asm.getCodeLines()) {
-                        objCode.append(cl.toObjString()).append("\n");
-                    }
-                    objectCodeArea.setText(objCode.toString());
+                    
+                    objectCodeArea.setText(asm.getObjText());
                     JOptionPane.showMessageDialog(AssemblerGUI.this, "Второй проход завершен успешно.", "Успех", JOptionPane.INFORMATION_MESSAGE);
                 } else {
                     // Ошибка - заполняем область ошибок
