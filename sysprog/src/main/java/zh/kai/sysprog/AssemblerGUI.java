@@ -184,7 +184,7 @@ public class AssemblerGUI extends JFrame {
        relTabScrollPane.setBorder(new TitledBorder("Таблица перемещений"));
 
         String[] extTabColumns = {"Внеш. имя","Адрес","Располож."};
-        extTabModel = new DefaultTableModel(relTabColumns, 0) {
+        extTabModel = new DefaultTableModel(extTabColumns, 0) {
              @Override
             public boolean isCellEditable(int row, int column) {
                 return false; // Неизменяемая
@@ -192,7 +192,7 @@ public class AssemblerGUI extends JFrame {
         };
         JTable extTable = new JTable(extTabModel);
         JScrollPane extTabScrollPane = new JScrollPane(extTable);
-        extTabScrollPane.setBorder(new TitledBorder("Таблица перемещений"));
+        extTabScrollPane.setBorder(new TitledBorder("Внешние имена"));
 
         JPanel relAndExtData = new JPanel(new GridLayout(1, 2, 0, 10));
 
