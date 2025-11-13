@@ -86,7 +86,7 @@ public class Assembler {
         try (Scanner sc = new Scanner(text)) {
             while (sc.hasNext()) {
                 line  = sc.nextLine().trim();
-                String[] split = line.split(" ", 3);
+                String[] split = line.split("\\s+", 3);
                 if(split.length != 3){
                     Errors.addPart1("Неверный формат кода операции: "+ line);
                     continue;
@@ -131,14 +131,14 @@ public class Assembler {
                if(line.isBlank()) continue;
                String[] split;
                if(line.startsWith(".")){
-                    split = line.split(" ",3);
+                    split = line.split("\\s+",3);
                     switch (split.length) {
                        case 3 -> codeLines.add(new CodeLine(split[0], split[1],split[2]));
                        case 2 -> codeLines.add(new CodeLine(split[0], split[1], null)); //без аргументов
                        case 1 -> codeLines.add(new CodeLine(split[0], null, null));//строка метка
                    }
                }else{
-                    split = line.split(" ",2);
+                    split = line.split("\\s+",2);
                    switch (split.length) {
                        case 2 -> codeLines.add(new CodeLine(null, split[0],split[1]));
                        case 1 -> codeLines.add(new CodeLine(null, split[0], null)); //без аргументов
@@ -380,7 +380,7 @@ public class Assembler {
                         relocationTable.add(currentLine.getAddress()); //добовляем в таблицу релокации все прямые адресации 
                     }
                 }else{
-                    String[] split = arguments.split(" ");
+                    String[] split = arguments.split("\\s+");
                     switch (split.length) {
                         case 2 -> {
                             if(split[0].startsWith("r") && split[1].startsWith("r")){
