@@ -224,7 +224,7 @@ public class AssemblerGUI extends JFrame {
     private void parseOpcodeData(String opcod) {
         String[] lines = opcod.trim().split("\n");
         for (String line : lines) {
-            String[] parts = line.trim().split(" ");
+            String[] parts = line.trim().split("\\s+");
             if (parts.length == 3) {
                 opcodeTableModel.addRow(new Object[]{parts[0], parts[1], parts[2]});
             }
@@ -298,7 +298,7 @@ public class AssemblerGUI extends JFrame {
                     
                     // Вспомогательная таблица
                     for (CodeLine cl : asm.getCodeLines()) {
-                        String[] split = cl.toAdditionString().split(" ", 2);
+                        String[] split = cl.toAdditionString().split("\\s+", 2);
 
                         auxTableModel.addRow(new Object[]{
                             split[0],
@@ -307,7 +307,7 @@ public class AssemblerGUI extends JFrame {
                     }
                     for (Segment s : asm.getSegments()) {
                         for (CodeLine cl : s.getCodeLines()) {
-                            String[] split = cl.toAdditionString().split(" ", 2);
+                            String[] split = cl.toAdditionString().split("\\s+", 2);
 
                             auxTableModel.addRow(new Object[]{
                                 split[0],

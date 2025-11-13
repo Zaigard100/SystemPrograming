@@ -36,7 +36,7 @@ public class CodeLine {
                 // что длина верна.
             }
 
-            String[] args = arguments.split(" ");
+            String[] args = arguments.split("\\s+");
 
 
             for (String a : args) {
@@ -61,9 +61,8 @@ public class CodeLine {
                         Errors.addPart1("Прямая адресация не поддерживается: "+this);
                         return false;
                     }
-                    if(lenght==4){
                         len+=Assembler.WORD_LENGHT;
-                    }
+                    
                 }else if(a.startsWith("r")){
                     len += 0.5;
                 }else if(Utils.isIntegerRegex(a)){

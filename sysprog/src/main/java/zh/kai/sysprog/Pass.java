@@ -89,7 +89,7 @@ public class Pass {
                             }                        
                         }
                         case "extref" -> {
-                            for(String s: currentLine.getArguments().split(" ")){
+                            for(String s: currentLine.getArguments().split("\\s+")){
                                 if(symTab.containsKey(s.trim())){
                                     
                                     Errors.addPart1("Дубликат метки в extref на строке "+i+": "+currentLine);
@@ -99,7 +99,7 @@ public class Pass {
                             }
                         }
                         case "extdef" -> {
-                            for(String s: currentLine.getArguments().split(" ")){
+                            for(String s: currentLine.getArguments().split("\\s+")){
                                 externalLinks.put(s.trim(), null);
                             }
                         }
@@ -173,7 +173,7 @@ public class Pass {
                         if(arguments != null){
                             int start = 0;
                             try{
-                                String[] split = arguments.trim().split(" ");
+                                String[] split = arguments.trim().split("\\s+");
                                 if(split.length == 2){
                                     arguments = split[1];
                                     if(Utils.isIntegerRegex(arguments)) start = Integer.parseInt(arguments);
@@ -287,7 +287,7 @@ public class Pass {
                         }
                     }
                 }else{
-                    String[] split = arguments.split(" ");
+                    String[] split = arguments.split("\\s+");
                     switch (split.length) {
                         case 2 -> {
                             if(split[0].startsWith("r") && split[1].startsWith("r")){
