@@ -343,7 +343,7 @@ public class AssemblerGUI extends JFrame {
                         });
                     }
                     
-                    JOptionPane.showMessageDialog(AssemblerGUI.this, "Первый проход завершен успешно.", "Успех", JOptionPane.INFORMATION_MESSAGE);
+                    //JOptionPane.showMessageDialog(AssemblerGUI.this, "Первый проход завершен успешно.", "Успех", JOptionPane.INFORMATION_MESSAGE);
 
                 } else {
                     // Ошибка - заполняем область ошибок
@@ -431,7 +431,7 @@ public class AssemblerGUI extends JFrame {
                     }
 
                     objectCodeArea.setText(asm.getObjText());
-                    JOptionPane.showMessageDialog(AssemblerGUI.this, "Второй проход завершен успешно.", "Успех", JOptionPane.INFORMATION_MESSAGE);
+                    //JOptionPane.showMessageDialog(AssemblerGUI.this, "Второй проход завершен успешно.", "Успех", JOptionPane.INFORMATION_MESSAGE);
                 } else {
                     // Ошибка - заполняем область ошибок
                     errorsPass2Area.setText(Errors.getPart2());

@@ -1,7 +1,9 @@
 package zh.kai.sysprog;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import zh.kai.sysprog.Assembler.AdderssationType;
 import zh.kai.sysprog.asm.Address;
@@ -12,6 +14,8 @@ import zh.kai.sysprog.asm.Segment;
 import zh.kai.sysprog.utils.Utils;
 
 public class Pass {
+
+    
 
     public static boolean first(
             ArrayList<Operation> operationsCodes,
@@ -72,7 +76,8 @@ public class Pass {
                             return false;
                         }
                         case "segment" -> {
-
+                            Errors.addPart1("Дирректива "+operationName+" не может быть использована лишь в начале программы: "+ currentLine);
+                            return false;
                         }
                         case "end" -> {
                             if(currentLine.getArguments().equals(header.getLabel())){
@@ -89,9 +94,12 @@ public class Pass {
                             }                        
                         }
                         case "extref" -> {
-                            for(String s: currentLine.getArguments().split("\\s+")){
+                            if(!checkPrevToStart(codeLines,currentLine)){
+                                Errors.addPart1("Деректива extref должна быть в начале программы");
+                                hasError = true;
+                            }
+                            for(String s: currentLine.getArguments().split("\s+")){
                                 if(symTab.containsKey(s.trim())){
-                                    
                                     Errors.addPart1("Дубликат метки в extref на строке "+i+": "+currentLine);
                                     hasError = true;
                                 }
@@ -99,7 +107,11 @@ public class Pass {
                             }
                         }
                         case "extdef" -> {
-                            for(String s: currentLine.getArguments().split("\\s+")){
+                            if(!checkPrevToStart(codeLines,currentLine)){
+                                Errors.addPart1("Деректива extdef должна быть в начале программы");
+                                hasError = true;
+                            }
+                            for(String s: currentLine.getArguments().split("\s+")){
                                 externalLinks.put(s.trim(), null);
                             }
                         }
@@ -173,7 +185,7 @@ public class Pass {
                         if(arguments != null){
                             int start = 0;
                             try{
-                                String[] split = arguments.trim().split("\\s+");
+                                String[] split = arguments.trim().split("\s+");
                                 if(split.length == 2){
                                     arguments = split[1];
                                     if(Utils.isIntegerRegex(arguments)) start = Integer.parseInt(arguments);
@@ -287,7 +299,7 @@ public class Pass {
                         }
                     }
                 }else{
-                    String[] split = arguments.split("\\s+");
+                    String[] split = arguments.split("\s+");
                     switch (split.length) {
                         case 2 -> {
                             if(split[0].startsWith("r") && split[1].startsWith("r")){
@@ -378,6 +390,19 @@ public class Pass {
                 throw new RuntimeException("nodef");
             }
         }
+    }
+    /*
+     * Проверяет что предыдущие CodeLine'ы являются start, segment,extdef, extref
+     */
+    public static  boolean  checkPrevToStart(ArrayList<CodeLine> codeLines,CodeLine codeLine){
+        boolean ch = true;
+        ArrayList<String> so =new ArrayList<>(List.of("start","segment","extdef","extref"));
+        for (CodeLine cl : codeLines) {
+            if(cl.equals(codeLine)) return ch;
+            String oper = cl.getOperationName();
+            ch = ch & (so.contains(oper));
+        }
+        return ch;
     }
 
     public static Operation getOperationByName(String oper,ArrayList<Operation> operationsCodes){
