@@ -12,11 +12,11 @@ import lombok.Setter;
 @Setter
 public class Assembler {
 
-    private String sourceCode;
-    private String operationCodeTable;
+    private String sourceCodeString;
+    private String operationCodeTableString;
 
     private ArrayList<CodeLine> codeLines;
-
+    private ArrayList<Operation> operationsTable;
 
     private ArrayList<String> errors;
 
@@ -31,13 +31,14 @@ public class Assembler {
     )); 
 
     public Assembler(String srcCode, String opCodeTab) {
-        sourceCode = srcCode;
-        operationCodeTable = opCodeTab;
+        sourceCodeString = srcCode;
+        operationCodeTableString = opCodeTab;
     }
 
     public void init(){
         errors = new ArrayList<>();
-        codeLines = parseCode(sourceCode);
+        codeLines = parseCode(sourceCodeString);
+        operationsTable = parseOpCode(operationCodeTableString);
     }
     
     public ArrayList<CodeLine> parseCode(String code){
@@ -57,13 +58,13 @@ public class Assembler {
             }else{
                 split = line.split("\\s+",2);
                 switch (split.length) {
-                    case 1 -> cls.add(new CodeLine(null, split[1], null));
-                    case 2 -> cls.add(new CodeLine(null, split[1], split[2]));
+                    case 1 -> cls.add(new CodeLine(null, split[0], null));
+                    case 2 -> cls.add(new CodeLine(null, split[0], split[1]));
                 }
             }
         }
     } catch (Exception e) {
-        errors.add("Критическая ошибка");
+        addError("Критическая ошибка",null);
         hasError = true;
     }
         return cls;
@@ -93,10 +94,24 @@ public class Assembler {
                 }
             }            
         } catch (Exception e) {
-            errors.add("Критическая ошибка");
+            
+        addError("Критическая ошибка",null);   
             hasError = true;
         }
         return operations;
+    }
+
+    public void pass(){
+        CodeLine header = codeLines.getFirst();
+        if(!header.eqName("start")){
+            addError("Программа должна начинатся с дерективы start",header);
+        }
+        
+    }
+
+    public void addError(String err,CodeLine cl){
+        hasError = true;
+        errors.add(err+(cl.toString()==null?" ":cl.toString()));
     }
 
 }

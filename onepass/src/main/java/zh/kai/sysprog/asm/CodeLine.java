@@ -19,6 +19,19 @@ public class CodeLine {
         this.argument = argument;
     }
 
+    public boolean eqName(String n){
+        return n.equals(operationName);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        if(label!=null) sb.append(label).append(" ");
+        if(operationName!=null) sb.append(operationName).append(" ");
+        if(argument!=null) sb.append(argument).append(" ");
+        return sb.toString();
+    }
+
     
 
 }
