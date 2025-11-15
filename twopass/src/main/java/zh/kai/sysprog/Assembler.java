@@ -9,7 +9,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
 
-import javax.swing.text.Utilities;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -18,7 +17,6 @@ import zh.kai.sysprog.asm.CodeLine;
 import zh.kai.sysprog.asm.Errors;
 import zh.kai.sysprog.asm.Operation;
 import zh.kai.sysprog.asm.Segment;
-import zh.kai.sysprog.utils.Utils;
 
 @Getter
 @Setter

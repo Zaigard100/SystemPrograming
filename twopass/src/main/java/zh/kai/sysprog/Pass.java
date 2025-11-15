@@ -1,6 +1,5 @@
 package zh.kai.sysprog;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -10,7 +9,6 @@ import zh.kai.sysprog.asm.Address;
 import zh.kai.sysprog.asm.CodeLine;
 import zh.kai.sysprog.asm.Errors;
 import zh.kai.sysprog.asm.Operation;
-import zh.kai.sysprog.asm.Segment;
 import zh.kai.sysprog.utils.Utils;
 
 public class Pass {
