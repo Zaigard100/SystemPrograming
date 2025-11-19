@@ -1,6 +1,7 @@
 package zh.kai.sysprog.asm;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
@@ -10,15 +11,12 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class Assembler {
+public class Assembler extends AsmBlocks {
 
     private String sourceCodeString;
     private String operationCodeTableString;
 
-    private ArrayList<CodeLine> codeLines;
-    private ArrayList<Operation> operationsTable;
-
-    private ArrayList<String> errors;
+    private List<String> errors;
 
     private boolean hasError = false;
     
@@ -39,6 +37,8 @@ public class Assembler {
         errors = new ArrayList<>();
         codeLines = parseCode(sourceCodeString);
         operationsTable = parseOpCode(operationCodeTableString);
+        metLabels = new HashMap<>();
+        symTab = new HashMap<>();
     }
     
     public ArrayList<CodeLine> parseCode(String code){
@@ -87,6 +87,16 @@ public class Assembler {
                         errors.add("Не верный формат кода операции:" +nextLine);
                         hasError = true;
                     }
+
+                    for(Operation o:operations){
+                        if(o.getOperationName().equals(name)){
+                            addError("Дубликат имени", null);
+                        }
+                        if(o.getCode() == code){
+                            addError("Дубликат кода", null);
+                        }                        
+                    }
+
                     operations.add(new Operation(name, code, lenght));
                 }else{
                     errors.add("Не верный формат кода операции:" +nextLine);
@@ -102,16 +112,40 @@ public class Assembler {
     }
 
     public void pass(){
-        CodeLine header = codeLines.getFirst();
-        if(!header.eqName("start")){
-            addError("Программа должна начинатся с дерективы start",header);
+        for(CodeLine cl:codeLines){
+            if(cl.pass(this)){
+                if(!cl.isLabelLine()) System.out.println(cl.toBin());
+            }else{
+                System.out.println();
+                for(String s:errors){
+                    System.out.println(s);
+                }
+
+                return;
+            }
         }
-        
     }
 
-    public void addError(String err,CodeLine cl){
+    @Override
+    public boolean addError(String err,CodeLine cl){
         hasError = true;
-        errors.add(err+(cl.toString()==null?" ":cl.toString()));
+        errors.add(err+(cl==null?" ":cl.toString()));
+        return false;
+    }
+
+    public String getSourseCode(){
+        StringBuilder sb = new StringBuilder();
+        for(CodeLine cl: codeLines){
+            sb.append(cl.toString()).append("\n");
+        }
+        return sb.toString();
+    }  
+    public String toBin(){
+        StringBuilder sb = new StringBuilder();
+        for(CodeLine cl: codeLines){
+            if(!cl.isLabelLine()) sb.append(cl.toBin()).append("\n");
+        }
+        return sb.toString();
     }
 
 }
