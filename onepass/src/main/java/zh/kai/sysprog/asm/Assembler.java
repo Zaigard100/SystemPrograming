@@ -19,6 +19,8 @@ public class Assembler extends AsmBlocks {
     private List<String> errors;
 
     private boolean hasError = false;
+
+    int linePos = -1;
     
     public static HashSet<String> dirrectives = new HashSet<>(List.of(
         "start","end",
@@ -39,6 +41,8 @@ public class Assembler extends AsmBlocks {
         operationsTable = parseOpCode(operationCodeTableString);
         metLabels = new HashMap<>();
         symTab = new HashMap<>();
+        linePos = 0;
+        lc = -1;
     }
     
     public ArrayList<CodeLine> parseCode(String code){
@@ -111,7 +115,13 @@ public class Assembler extends AsmBlocks {
         return operations;
     }
 
-    public void pass(){
+    public boolean passStep(){
+        boolean a = codeLines.get(linePos).pass(this);
+        linePos++;
+        return a && !hasError;
+    }
+
+    public boolean passFull(){
         for(CodeLine cl:codeLines){
             if(cl.pass(this)){
                 if(!cl.isLabelLine()) System.out.println(cl.toBin());
@@ -120,10 +130,10 @@ public class Assembler extends AsmBlocks {
                 for(String s:errors){
                     System.out.println(s);
                 }
-
-                return;
+                return false;
             }
         }
+        return !hasError;
     }
 
     @Override
@@ -143,7 +153,13 @@ public class Assembler extends AsmBlocks {
     public String toBin(){
         StringBuilder sb = new StringBuilder();
         for(CodeLine cl: codeLines){
-            if(!cl.isLabelLine()) sb.append(cl.toBin()).append("\n");
+            if(cl.isPassed){
+                if(!cl.isLabelLine()) {
+                    sb.append(cl.toBin()).append("\n");       
+                }
+            }else{
+                break;
+            }
         }
         return sb.toString();
     }

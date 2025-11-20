@@ -13,6 +13,8 @@ import lombok.Setter;
 @Setter
 public class CodeLine {
 
+    boolean isPassed = false;
+
     private String label;
     private String operationName;
     private String argument;
@@ -78,6 +80,10 @@ public class CodeLine {
                         asm.getHeader().setObjectCode(h);
 
                         objectCode = new short[]{adr[0],adr[1],adr[2]};
+
+                        if(!asm.getMetLabels().isEmpty()){
+                            asm.addError("Встреченные имена небыли найдены полностью", this);
+                        }
                     }
                     case "resb" -> {
                         address = new Address(lc);
@@ -124,11 +130,11 @@ public class CodeLine {
                         }
 
                         if(argument.startsWith("C")){
-                            argument = argument.substring(2, argument.length()-1);
-                            objectCode = Utils.stringToAsciiShortArray(argument);
+                            String arg = argument.substring(2, argument.length()-1);
+                            objectCode = Utils.stringToAsciiShortArray(arg);
                         }else if(argument.startsWith("X")){
-                            argument = argument.substring(2, argument.length()-1);
-                            objectCode = Utils.hexStringToShortArray(argument);
+                            String arg = argument.substring(2, argument.length()-1);
+                            objectCode = Utils.hexStringToShortArray(arg);
                         }else{
                             int data = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
                             if(data == -1) return asm.addError("Ожидется что аргумент число",this);
@@ -205,7 +211,7 @@ public class CodeLine {
         }
 
         if(label!=null) {
-            asm.getSymTab().put(label, address);
+            if(!isHead()) asm.getSymTab().put(label, address);
             ArrayList<CodeLine> toRemove = new ArrayList<>();
             for(CodeLine cl:asm.getMetLabels().keySet()){
                 if(label.equals(asm.getMetLabels().get(cl))){
@@ -219,7 +225,7 @@ public class CodeLine {
                 asm.getMetLabels().remove(elem);
             }
         }
-
+        isPassed = true;
         return true;
     }
 

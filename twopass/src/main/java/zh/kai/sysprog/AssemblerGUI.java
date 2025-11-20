@@ -91,8 +91,6 @@ public class AssemblerGUI extends JFrame {
         addRowButton.addActionListener(new AddRowListener());
         removeRowButton.addActionListener(new RemoveRowListener());
 
-        
-
         JScrollPane opcodeScrollPane = new JScrollPane(opcodeTable);
         opcodeScrollPane.setBorder(new TitledBorder("Таблица кодов операций (Opcode)"));
         opcodeScrollPane.setPreferredSize(new Dimension(450, 200));

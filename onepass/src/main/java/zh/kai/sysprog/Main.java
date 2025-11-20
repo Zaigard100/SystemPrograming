@@ -44,7 +44,7 @@ public class Main {
         }
         System.out.println("");
 
-        asm.pass();
+        asm.passFull();
 
         System.out.println();
 
