@@ -7,14 +7,14 @@ public class Main {
 
     public final static String CODE = 
     """
-    .prog start 100
+    .prog start 0
     .loop
         lda .one
         mov r1 r2
-        lda .two
+        lda [.two]
         mov r1 r3
         add r1 r2
-    .save sta .res
+    .save sta [.res]
         clr
         jmp .loop 
     .one byte 1

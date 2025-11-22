@@ -48,7 +48,7 @@ public class CodeLine {
                         
                         lc = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
                         
-                        if(lc<=0 || lc>Utils.WORD_MAX){//Пока что нельзя 0 TODO
+                        if(lc!=0){ 
                             return asm.addError("Не допустимый адрес", this);
                         }
                         asm.setLc(lc);
@@ -186,7 +186,39 @@ public class CodeLine {
                             if(argument==null){
                                 return asm.addError("Ожидется что у "+operationName+" будет аргумент",this);
                             }
-                            if(argument.startsWith(".")){
+                            if(argument.startsWith("[")){
+                                if(asm.getType().equals(AddressationType.DIRECT)){
+                                    asm.addError("Прямая адресация недоступна", this);
+                                    return false;
+                                }
+                                if(argument.endsWith("]")){
+                                    String arg = argument.trim().substring(1, argument.length()-1);
+                                    if(arg.startsWith(".")){
+                                        if(asm.getSymTab().keySet().contains(arg)){
+                                            Address adr = asm.getSymTab().get(arg);
+                                            int diff = adr.getAddress() - (address.getAddress() + len);
+                                            short[] a = Utils.intToBin(diff);
+                                            objectCode = new short[]{(short) (code+1),a[0],a[1],a[2]};
+                                        }else{
+                                            objectCode = new short[]{(short) (code+1),0xff,0xff,0xff};
+                                            asm.getMetLabels().put(this, arg);
+                                        }
+                                    }else{        
+                                        int data = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
+                                        if(data == -1) return asm.addError("Ожидется что аргумент число",this);
+                                        if(data>=0 && data>Utils.MAX_BYTE) return asm.addError("Не корректные данные",this);
+                                        int diff = address.getAddress() + len;
+                                        short[] a = Utils.intToBin(diff);
+                                        objectCode = new short[]{(short) (code+1),a[0],a[1],a[2]};
+                                    }
+                                }else{
+                                    asm.addError("Ожидается ]", this);
+                                }
+                            }else if(argument.startsWith(".")){
+                                if(asm.getType().equals(AddressationType.RELATIVE)){
+                                    asm.addError("Прямая адресация недоступна", this);
+                                    return false;
+                                }
                                 if(asm.getSymTab().keySet().contains(argument)){
                                     Address adr = asm.getSymTab().get(argument);
                                     short[] a = adr.toBin();
@@ -195,6 +227,13 @@ public class CodeLine {
                                     objectCode = new short[]{(short) (code+1),0xff,0xff,0xff};
                                     asm.getMetLabels().put(this, argument);
                                 }
+                                asm.relocationTable.add(address);
+                            }else{
+                                int data = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
+                                if(data == -1) return asm.addError("Ожидется что аргумент число",this);
+                                if(data>=0 && data>Utils.MAX_BYTE) return asm.addError("Не корректные данные",this);
+                                short[] bin = Utils.intToBin(data);
+                                objectCode = new short[]{(short) (code+1),bin[0],bin[1],bin[2]};
                             }
                         }
                         default -> {
@@ -214,11 +253,21 @@ public class CodeLine {
             if(!isHead()) asm.getSymTab().put(label, address);
             ArrayList<CodeLine> toRemove = new ArrayList<>();
             for(CodeLine cl:asm.getMetLabels().keySet()){
+               
                 if(label.equals(asm.getMetLabels().get(cl))){
-                    cl.getObjectCode()[1] = address.toBin()[0];
-                    cl.getObjectCode()[2] = address.toBin()[1];
-                    cl.getObjectCode()[3] = address.toBin()[2];
-                    toRemove.add(cl);
+                    if(cl.getArgument().startsWith("[")){
+                        int diff = address.getAddress() - (cl.getAddress().getAddress() + cl.getObjectCode().length);
+                        short[] a = Utils.intToBin(diff);
+                        cl.getObjectCode()[1] = a[0];
+                        cl.getObjectCode()[2] = a[1];
+                        cl.getObjectCode()[3] = a[2];
+                        toRemove.add(cl);
+                    }else{
+                        cl.getObjectCode()[1] = address.toBin()[0];
+                        cl.getObjectCode()[2] = address.toBin()[1];
+                        cl.getObjectCode()[3] = address.toBin()[2];
+                        toRemove.add(cl);
+                    }
                 }
             }
             for (CodeLine elem : toRemove) {

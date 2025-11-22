@@ -48,6 +48,7 @@ public class Assembler extends AsmBlocks {
         operationsTable = parseOpCode(operationCodeTableString);
         metLabels = new HashMap<>();
         symTab = new HashMap<>();
+        relocationTable = new ArrayList<>();
         linePos = 0;
         lc = -1;
     }
@@ -62,15 +63,15 @@ public class Assembler extends AsmBlocks {
             if(line.startsWith(".")){
                 split = line.split("\\s+",3);
                 switch (split.length) {
-                    case 1 -> cls.add(new CodeLine(split[0], null, null));
-                    case 2 -> cls.add(new CodeLine(split[0], split[1], null));
-                    case 3 -> cls.add(new CodeLine(split[0], split[1], split[2]));
+                    case 1 -> cls.add(new CodeLine(split[0].trim(), null, null));
+                    case 2 -> cls.add(new CodeLine(split[0].trim(), split[1].trim(), null));
+                    case 3 -> cls.add(new CodeLine(split[0].trim(), split[1].trim(), split[2].trim()));
                 }
             }else{
                 split = line.split("\\s+",2);
                 switch (split.length) {
-                    case 1 -> cls.add(new CodeLine(null, split[0], null));
-                    case 2 -> cls.add(new CodeLine(null, split[0], split[1]));
+                    case 1 -> cls.add(new CodeLine(null, split[0].trim(), null));
+                    case 2 -> cls.add(new CodeLine(null, split[0].trim(), split[1].trim()));
                 }
             }
         }

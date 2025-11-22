@@ -152,6 +152,7 @@ public class AssemblerGUI extends JFrame{
             errorsPassArea.setText("");
             symTabModel.setRowCount(0);
             meetTabModel.setRowCount(0);
+            relocationTabModel.setRowCount(0);
         }
         
     }
@@ -207,6 +208,10 @@ public class AssemblerGUI extends JFrame{
         meetTabModel.setRowCount(0);
         for(CodeLine cl: meet.keySet()){
             meetTabModel.addRow(new Object[]{cl.getAddress(),meet.get(cl)});
+        }
+        relocationTabModel.setRowCount(0);
+        for(Address a: asm.getRelocationTable()){
+            relocationTabModel.addRow(new Object[]{a});
         }
     }
 
@@ -272,7 +277,7 @@ public class AssemblerGUI extends JFrame{
         JScrollPane meetTabScrollPane = new JScrollPane(meetTable);
         meetTabScrollPane.setBorder(new TitledBorder("Таблица встреченных имен"));
         tabs.add(meetTabScrollPane);
-        tabs.setPreferredSize(new Dimension(WIDTH/2,HEIGHT/4));
+        tabs.setPreferredSize(new Dimension(WIDTH/2,HEIGHT/8));
         panel.add(tabs);
 
         String[] relocationTabColumn = {"Address"};
@@ -286,7 +291,7 @@ public class AssemblerGUI extends JFrame{
         JScrollPane relocationTabScrollPane = new JScrollPane(relocationTable);
         
         relocationTabScrollPane.setBorder(new TitledBorder("Таблица перемещений"));
-        relocationTabScrollPane.setPreferredSize(new Dimension(WIDTH/2,HEIGHT/4));
+        relocationTabScrollPane.setPreferredSize(new Dimension(WIDTH/2,HEIGHT/8));
         panel.add(relocationTabScrollPane);
 
         errorsPassArea = new JTextArea();
