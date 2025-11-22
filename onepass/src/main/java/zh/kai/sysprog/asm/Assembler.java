@@ -30,10 +30,17 @@ public class Assembler extends AsmBlocks {
         "resb","resw","byte","word"
     )); 
 
-    public Assembler(String srcCode, String opCodeTab) {
+    public Assembler(String srcCode, String opCodeTab,AddressationType type) {
+        super(type);
         sourceCodeString = srcCode;
         operationCodeTableString = opCodeTab;
     }
+
+    public Assembler(String srcCode, String opCodeTab) {
+        this(srcCode, opCodeTab, AddressationType.CHAINED);
+    }
+
+    
 
     public void init(){
         errors = new ArrayList<>();

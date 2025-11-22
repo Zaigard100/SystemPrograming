@@ -11,6 +11,8 @@ import lombok.Setter;
 @Setter
 public class AsmBlocks {
 
+    AddressationType type;
+
     String blockName;
 
     List<CodeLine> codeLines;
@@ -18,10 +20,17 @@ public class AsmBlocks {
 
     Map<CodeLine,String> metLabels;
     Map<String,Address> symTab;
+    List<Address> relocationTable;
 
     CodeLine header;
 
     int lc;
+
+    public AsmBlocks(AddressationType type) {
+        this.type = type;
+    }
+
+    
 
     public boolean addError(String string, CodeLine codeLine){return false;};
 

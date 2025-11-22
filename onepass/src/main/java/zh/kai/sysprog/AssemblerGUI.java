@@ -9,13 +9,14 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
@@ -24,6 +25,7 @@ import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 
 import zh.kai.sysprog.asm.Address;
+import zh.kai.sysprog.asm.AddressationType;
 import zh.kai.sysprog.asm.Assembler;
 import zh.kai.sysprog.asm.CodeLine;
 import zh.kai.sysprog.asm.Operation;
@@ -31,10 +33,10 @@ import zh.kai.sysprog.asm.Operation;
 public class AssemblerGUI extends JFrame{
 
     public final int WIDTH = 1000;
-    public final int HEIGHT = 800;
+    public final int HEIGHT = 900;
 
     Assembler asm;
-
+    private JComboBox<AddressationType> type;
     
     private JTextArea sourceCodeArea;
     private DefaultTableModel opcodeTableModel;
@@ -42,6 +44,7 @@ public class AssemblerGUI extends JFrame{
 
     private DefaultTableModel symTabModel;
     private DefaultTableModel meetTabModel;
+    private DefaultTableModel relocationTabModel;
     private JTextArea objectCodeArea;
     private JTextArea errorsPassArea;
 
@@ -66,6 +69,9 @@ public class AssemblerGUI extends JFrame{
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(new TitledBorder("Исходные данные"));
+
+        type = new JComboBox<>(AddressationType.values());
+        panel.add(type);
 
         sourceCodeArea = new JTextArea(20, 30);
         sourceCodeArea.setText(Main.CODE.trim()); // Заполнение примером
@@ -138,7 +144,8 @@ public class AssemblerGUI extends JFrame{
                 String l = (String) opcodeTableModel.getValueAt(i, 2);
                 opcodeData.append(n).append(" ").append(c).append(" ").append(l).append("\n");
             }
-            asm = new Assembler(code, opcodeData.toString());
+            AddressationType curentType = (AddressationType) type.getSelectedItem();
+            asm = new Assembler(code, opcodeData.toString(),curentType);
             asm.init();
             System.out.println("Data has been load");
             objectCodeArea.setText("");
@@ -267,6 +274,20 @@ public class AssemblerGUI extends JFrame{
         tabs.add(meetTabScrollPane);
         tabs.setPreferredSize(new Dimension(WIDTH/2,HEIGHT/4));
         panel.add(tabs);
+
+        String[] relocationTabColumn = {"Address"};
+        relocationTabModel = new DefaultTableModel(relocationTabColumn,0){
+            @Override
+            public  boolean isCellEditable(int row, int column){
+                return false;
+            }
+        };
+        JTable relocationTable = new JTable(relocationTabModel);
+        JScrollPane relocationTabScrollPane = new JScrollPane(relocationTable);
+        
+        relocationTabScrollPane.setBorder(new TitledBorder("Таблица перемещений"));
+        relocationTabScrollPane.setPreferredSize(new Dimension(WIDTH/2,HEIGHT/4));
+        panel.add(relocationTabScrollPane);
 
         errorsPassArea = new JTextArea();
         errorsPassArea.setEditable(false);
