@@ -58,8 +58,7 @@ public class CodeLine {
                         asm.setHeader(this);
                     }
                     case "end" -> {
-                        short[] header = asm.getHeader().getObjectCode();
-                        int start = (((header[0]<<8) + header[1]) << 8) + header[2];
+                        int start = asm.getHeader().getAddress().getAddress();
                         if(argument==null){
                             objectCode = asm.getHeader().getAddress().toBin().clone();
                             return true;
