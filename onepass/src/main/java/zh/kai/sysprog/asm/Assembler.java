@@ -162,8 +162,13 @@ public class Assembler extends AsmBlocks {
             if(cl.isPassed){
                 if(!cl.isLabelLine()) {
                     if(cl.isEnd()){
-                        for(Address a: relocationTable){
-                            sb.append("M " + a.toString()).append("\n");
+                        for(Address a: relocationTable.keySet()){
+                            sb
+                            .append("M ")
+                            .append(a.toString())
+                            .append(" ")
+                            .append(relocationTable.get(a))
+                            .append("\n");
                         }
                     }
                     sb.append(cl.toBin()).append("\n");       
