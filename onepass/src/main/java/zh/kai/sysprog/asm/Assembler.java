@@ -40,15 +40,13 @@ public class Assembler extends AsmBlocks {
         this(srcCode, opCodeTab, AddressationType.CHAINED);
     }
 
-    
-
     public void init(){
         errors = new ArrayList<>();
         codeLines = parseCode(sourceCodeString);
         operationsTable = parseOpCode(operationCodeTableString);
         metLabels = new HashMap<>();
         symTab = new HashMap<>();
-        relocationTable = new ArrayList<>();
+        relocationTable = new HashMap<>();
         linePos = 0;
         lc = -1;
     }
