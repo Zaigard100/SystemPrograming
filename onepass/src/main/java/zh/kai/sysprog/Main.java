@@ -7,7 +7,9 @@ public class Main {
 
     public final static String CODE = 
     """
-    .prog start 0
+    .prog start
+    extref .key .hash
+    extdef .hex .res
     .loop
         lda .one
         mov r1 r2
@@ -22,7 +24,20 @@ public class Main {
     .res word 0
     .hex byte X"ABCDEF45"
     .hello byte C"Hello"
-    end 101
+
+    .a1 segment
+    extref .hex
+    extdef .hash
+    .hash byte X"AB1020"
+    end .a1
+
+    .b2 segment
+    extref .res
+    extdef .key
+    .key word 45
+    end .b2
+    
+    end .prog
     """;
 
     public final static String OPER = 
