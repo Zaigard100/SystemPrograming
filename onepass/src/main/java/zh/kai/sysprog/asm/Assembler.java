@@ -161,6 +161,11 @@ public class Assembler extends AsmBlocks {
         for(CodeLine cl: codeLines){
             if(cl.isPassed){
                 if(!cl.isLabelLine()) {
+                    if(cl.isEnd()){
+                        for(Address a: relocationTable){
+                            sb.append("M " + a.toString()).append("\n");
+                        }
+                    }
                     sb.append(cl.toBin()).append("\n");       
                 }
             }else{
