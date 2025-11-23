@@ -64,7 +64,7 @@ public class CodeLine {
                             return true;
                         }
                         int arg = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
-                        if(arg<start && arg>lc){
+                        if(arg<start || arg>lc){
                             return asm.addError("Не допустимый аргумент", this);
                         }
                         short[] adr = Utils.intToBin(arg);
