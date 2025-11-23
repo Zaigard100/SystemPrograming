@@ -38,19 +38,19 @@ public class CodeLine {
             if(Assembler.dirrectives.contains(operationName)){
                 switch (operationName) {
                     case "start" -> {
+                        asm.setBlockName(label);
                         if(label == null){
                             return asm.addError("Ожидется что у "+operationName+" будет имя",this);
                         }
+                        
                         if(argument == null){
-                            return asm.addError("Ожидется что у "+operationName+" будет аргумент",this);
+                            lc = 0;
+                        }else{
+                            lc = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
                         }
-                        asm.setBlockName(label);
+
+                        if(lc!=0) return asm.addError("Не допустимый адрес", this);
                         
-                        lc = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
-                        
-                        if(lc!=0){ 
-                            return asm.addError("Не допустимый адрес", this);
-                        }
                         asm.setLc(lc);
                         address = new Address(lc);
                         short[] binAddress = Utils.intToBin(lc);
@@ -58,13 +58,14 @@ public class CodeLine {
                         asm.setHeader(this);
                     }
                     case "end" -> {
-                        int start = asm.getHeader().getAddress().getAddress();
+                        short[] header = asm.getHeader().getObjectCode();
+                        int start = (((header[0]<<8) + header[1]) << 8) + header[2];
                         if(argument==null){
                             objectCode = asm.getHeader().getAddress().toBin().clone();
                             return true;
                         }
                         int arg = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
-                        if(arg<start && arg>lc){
+                        if(arg<start || arg>lc){
                             return asm.addError("Не допустимый аргумент", this);
                         }
                         short[] adr = Utils.intToBin(arg);
