@@ -59,11 +59,12 @@ public class CodeLine {
                     }
                     case "end" -> {
                         int start = asm.getHeader().getAddress().getAddress();
+                        int arg;
                         if(argument==null){
-                            objectCode = asm.getHeader().getAddress().toBin().clone();
-                            return true;
+                            arg = 0;
+                        }else{
+                            arg = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
                         }
-                        int arg = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
                         if(arg<start || arg>lc){
                             return asm.addError("Не допустимый аргумент", this);
                         }
