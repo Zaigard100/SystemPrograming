@@ -9,7 +9,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -21,6 +20,8 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 
 import zh.kai.sysprog.asm.Address;
@@ -55,6 +56,8 @@ public class AssemblerGUI extends JFrame{
         mainPanel.add(createColumn1());
         mainPanel.add(createColumn2());
 
+        init();
+
         getContentPane().add(mainPanel, BorderLayout.CENTER);
         setResizable(false);
         pack();
@@ -71,20 +74,38 @@ public class AssemblerGUI extends JFrame{
         sourceCodeArea.setText(Main.CODE.trim()); // Заполнение примером
         Font font = new Font("Consolas", Font.PLAIN, 14);
         sourceCodeArea.setFont(font);
+
+        sourceCodeArea.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                init(); // Вызываем init() при вставке текста
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                init(); // Вызываем init() при удалении текста
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                // Изменение атрибутов: обычно игнорируется для простого текста
+            }
+        });
+
         JScrollPane sourceCodeScrollPane = new JScrollPane(sourceCodeArea);
         sourceCodeScrollPane.setPreferredSize(new Dimension(WIDTH/2, HEIGHT));
         sourceCodeScrollPane.setBorder(new TitledBorder("Исходный код"));
         panel.add(sourceCodeScrollPane);
 
         JPanel asmButtons = new JPanel(new FlowLayout());
-        JButton initButton = new JButton("Load Data");
+        //JButton initButton = new JButton("Load Data");
         JButton stepButton = new JButton("Step");
         JButton fullButton = new JButton("Full");
-        initButton.addActionListener(new InitListener());
+        //initButton.addActionListener(new InitListener());
         stepButton.addActionListener(new StepListener());
         fullButton.addActionListener(new FullListener());
 
-        asmButtons.add(initButton);
+        //asmButtons.add(initButton);
         asmButtons.add(stepButton);
         asmButtons.add(fullButton);
         //asmButtons.setPreferredSize(new Dimension(100,HEIGHT/2-2));
@@ -127,24 +148,28 @@ public class AssemblerGUI extends JFrame{
         }
     }
 
+    public void init(){
+        String code = sourceCodeArea.getText().trim();
+        StringBuilder opcodeData = new StringBuilder();
+        for (int i = 0; i < opcodeTableModel.getRowCount(); i++) {
+            String n = (String) opcodeTableModel.getValueAt(i, 0);
+            String c = (String) opcodeTableModel.getValueAt(i, 1);
+            String l = (String) opcodeTableModel.getValueAt(i, 2);
+            opcodeData.append(n).append(" ").append(c).append(" ").append(l).append("\n");
+        }
+        asm = new Assembler(code, opcodeData.toString());
+        asm.init();
+        System.out.println("Data has been load");
+        objectCodeArea.setText("");
+        errorsPassArea.setText("");
+        symTabModel.setRowCount(0);
+        meetTabModel.setRowCount(0);
+    }
+
     private class InitListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
-            String code = sourceCodeArea.getText().trim();
-            StringBuilder opcodeData = new StringBuilder();
-            for (int i = 0; i < opcodeTableModel.getRowCount(); i++) {
-                String n = (String) opcodeTableModel.getValueAt(i, 0);
-                String c = (String) opcodeTableModel.getValueAt(i, 1);
-                String l = (String) opcodeTableModel.getValueAt(i, 2);
-                opcodeData.append(n).append(" ").append(c).append(" ").append(l).append("\n");
-            }
-            asm = new Assembler(code, opcodeData.toString());
-            asm.init();
-            System.out.println("Data has been load");
-            objectCodeArea.setText("");
-            errorsPassArea.setText("");
-            symTabModel.setRowCount(0);
-            meetTabModel.setRowCount(0);
+            init();
         }
         
     }

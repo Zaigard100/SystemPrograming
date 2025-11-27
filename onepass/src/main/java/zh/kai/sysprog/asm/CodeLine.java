@@ -1,10 +1,7 @@
 package zh.kai.sysprog.asm;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Optional;
-
-import javax.swing.text.Utilities;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -59,15 +56,19 @@ public class CodeLine {
                     }
                     case "end" -> {
                         int start = asm.getHeader().getAddress().getAddress();
+                        
                         if(argument==null){
                             objectCode = asm.getHeader().getAddress().toBin().clone();
-                            return true;
+                        }else{
+                            int arg = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
+                            if(arg<start || arg>lc){
+                                return asm.addError("Не допустимый аргумент", this);
+                            }
+                            short[] adr = Utils.intToBin(arg);
+
+                            objectCode = new short[]{adr[0],adr[1],adr[2]};
                         }
-                        int arg = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
-                        if(arg<start || arg>lc){
-                            return asm.addError("Не допустимый аргумент", this);
-                        }
-                        short[] adr = Utils.intToBin(arg);
+                        
 
                         int diff = lc - start;
                         short[] len = Utils.intToBin(diff);
@@ -79,7 +80,6 @@ public class CodeLine {
 
                         asm.getHeader().setObjectCode(h);
 
-                        objectCode = new short[]{adr[0],adr[1],adr[2]};
 
                         if(!asm.getMetLabels().isEmpty()){
                             asm.addError("Встреченные имена небыли найдены полностью", this);

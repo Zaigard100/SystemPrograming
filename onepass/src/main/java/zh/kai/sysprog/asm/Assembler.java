@@ -3,6 +3,7 @@ package zh.kai.sysprog.asm;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 
@@ -21,6 +22,8 @@ public class Assembler extends AsmBlocks {
     private List<String> errors;
 
     private boolean hasError = false;
+
+    Iterator<CodeLine> steps;
 
     int linePos = -1;
     
@@ -45,6 +48,7 @@ public class Assembler extends AsmBlocks {
         symTab = new HashMap<>();
         isEnd = false;
         linePos = 0;
+        steps = codeLines.iterator();
         lc = -1;
     }
     
@@ -120,10 +124,33 @@ public class Assembler extends AsmBlocks {
 
     public boolean passStep(){
         if(isEnd) return !hasError;
+        if (steps.hasNext()) { 
+            CodeLine cl = steps.next();
+            if(cl.isEnd()){ 
+                isEnd = true;
+            }
+            return cl.pass(this);
+        }else{
+            if(!isEnd){
+                addError("Ожидался end", null);
+                isEnd = true;
+                return !hasError;
+            }
+        }
+        /*System.out.println(linePos+" "+ codeLines.size());
+        if(linePos>=codeLines.size()){
+            if(isEnd){
+                return !hasError;
+            }else{
+                isEnd = true;
+                addError("Ожидался end", null);
+            }
+        }
         boolean a = codeLines.get(linePos).pass(this);
         if(codeLines.get(linePos).isEnd()) isEnd = true;
         linePos++;
-        return a && !hasError;
+        */
+        return !hasError;
     }
 
     public boolean passFull(){
@@ -131,6 +158,7 @@ public class Assembler extends AsmBlocks {
         for(CodeLine cl:codeLines){
             if(cl.pass(this)){
                 if(!cl.isLabelLine()) System.out.println(cl.toBin());
+                if(cl.isEnd()) isEnd = true;
             }else{
                 System.out.println();
                 for(String s:errors){
@@ -140,6 +168,7 @@ public class Assembler extends AsmBlocks {
             }
             if(cl.isEnd()) break;
         }
+        if(!isEnd) addError("Ожидался end", null);
         return !hasError;
     }
 
