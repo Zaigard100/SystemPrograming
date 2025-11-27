@@ -209,7 +209,9 @@ public class CodeLine {
         }else{
             address = new Address(lc);
         }
-
+        if(lc<=0 || lc>Utils.WORD_MAX){
+            return asm.addError("Переполнение адреса", this);
+        }
         if(label!=null) {
             if(!isHead()) asm.getSymTab().put(label, address);
             ArrayList<CodeLine> toRemove = new ArrayList<>();
