@@ -13,6 +13,8 @@ import lombok.Setter;
 @Setter
 public class Assembler extends AsmBlocks {
 
+    boolean isEnd = false;
+
     private String sourceCodeString;
     private String operationCodeTableString;
 
@@ -41,6 +43,7 @@ public class Assembler extends AsmBlocks {
         operationsTable = parseOpCode(operationCodeTableString);
         metLabels = new HashMap<>();
         symTab = new HashMap<>();
+        isEnd = false;
         linePos = 0;
         lc = -1;
     }
@@ -116,12 +119,15 @@ public class Assembler extends AsmBlocks {
     }
 
     public boolean passStep(){
+        if(isEnd) return !hasError;
         boolean a = codeLines.get(linePos).pass(this);
+        if(codeLines.get(linePos).isEnd()) isEnd = true;
         linePos++;
         return a && !hasError;
     }
 
     public boolean passFull(){
+        if(isEnd()) return !hasError;
         for(CodeLine cl:codeLines){
             if(cl.pass(this)){
                 if(!cl.isLabelLine()) System.out.println(cl.toBin());
@@ -132,6 +138,7 @@ public class Assembler extends AsmBlocks {
                 }
                 return false;
             }
+            if(cl.isEnd()) break;
         }
         return !hasError;
     }
