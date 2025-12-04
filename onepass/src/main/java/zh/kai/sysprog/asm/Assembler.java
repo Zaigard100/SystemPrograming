@@ -40,15 +40,13 @@ public class Assembler extends AsmBlocks {
         this(srcCode, opCodeTab, AddressationType.CHAINED);
     }
 
-    
-
     public void init(){
         errors = new ArrayList<>();
         codeLines = parseCode(sourceCodeString);
         operationsTable = parseOpCode(operationCodeTableString);
         metLabels = new HashMap<>();
         symTab = new HashMap<>();
-        relocationTable = new ArrayList<>();
+        relocationTable = new HashMap<>();
         linePos = 0;
         lc = -1;
     }
@@ -164,8 +162,13 @@ public class Assembler extends AsmBlocks {
             if(cl.isPassed){
                 if(!cl.isLabelLine()) {
                     if(cl.isEnd()){
-                        for(Address a: relocationTable){
-                            sb.append("M " + a.toString()).append("\n");
+                        for(Address a: relocationTable.keySet()){
+                            sb
+                            .append("M ")
+                            .append(a.toString())
+                            .append(" ")
+                            .append(relocationTable.get(a))
+                            .append("\n");
                         }
                     }
                     sb.append(cl.toBin()).append("\n");       

@@ -20,7 +20,10 @@ public class AsmBlocks {
 
     Map<CodeLine,String> metLabels;
     Map<String,Address> symTab;
-    List<Address> relocationTable;
+    Map<Address,String> relocationTable;
+
+    Map<String,Address> externalLinks;
+    List<String> externalSymbols;
 
     CodeLine header;
 

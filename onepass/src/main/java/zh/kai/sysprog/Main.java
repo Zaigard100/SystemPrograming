@@ -7,7 +7,9 @@ public class Main {
 
     public final static String CODE = 
     """
-    .prog start 0
+    .prog start
+    extref .key .hash
+    extdef .hex .res
     .loop
         lda .one
         mov r1 r2

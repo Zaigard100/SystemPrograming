@@ -231,7 +231,7 @@ public class CodeLine {
                                     objectCode = new short[]{(short) (code+1),0xff,0xff,0xff};
                                     asm.getMetLabels().put(this, argument);
                                 }
-                                asm.relocationTable.add(address);
+                                asm.relocationTable.put(address, "");
                             }else{
                                 int data = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
                                 if(data == -1) return asm.addError("Ожидется что аргумент число",this);

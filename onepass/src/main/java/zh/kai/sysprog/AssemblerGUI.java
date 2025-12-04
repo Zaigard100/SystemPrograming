@@ -16,7 +16,6 @@ import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
@@ -34,7 +33,7 @@ import zh.kai.sysprog.asm.Operation;
 
 public class AssemblerGUI extends JFrame{
 
-    public final int WIDTH = 1000;
+    public final int WIDTH = 1400;
     public final int HEIGHT = 900;
 
     Assembler asm;
@@ -47,18 +46,22 @@ public class AssemblerGUI extends JFrame{
     private DefaultTableModel symTabModel;
     private DefaultTableModel meetTabModel;
     private DefaultTableModel relocationTabModel;
+    private DefaultTableModel externalSymbolsModel;
+    private DefaultTableModel externalLinksModel;
     private JTextArea objectCodeArea;
     private JTextArea errorsPassArea;
+    
 
     public AssemblerGUI(){
         setTitle("AssemblerGUI");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
 
-        JPanel mainPanel = new JPanel(new GridLayout(1, 2,10,0));
+        JPanel mainPanel = new JPanel(new GridLayout(1, 3,10,0));
 
         mainPanel.add(createColumn1());
         mainPanel.add(createColumn2());
+        mainPanel.add(createColumn3());
 
         initAsm();
 
@@ -238,8 +241,8 @@ public class AssemblerGUI extends JFrame{
             meetTabModel.addRow(new Object[]{cl.getAddress(),meet.get(cl)});
         }
         relocationTabModel.setRowCount(0);
-        for(Address a: asm.getRelocationTable()){
-            relocationTabModel.addRow(new Object[]{a});
+        for(Address a: asm.getRelocationTable().keySet()){
+            relocationTabModel.addRow(new Object[]{a,asm.getRelocationTable().get(a)});
         }
     }
 
@@ -270,18 +273,10 @@ public class AssemblerGUI extends JFrame{
 
     private JPanel createColumn2(){
         JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(new TitledBorder("Результат"));
+        panel.setLayout(new BoxLayout(panel,BoxLayout.Y_AXIS));
+        panel.setBorder(new TitledBorder("Таблицы"));
 
-        objectCodeArea = new JTextArea();
-        objectCodeArea.setEditable(false);
-        objectCodeArea.setFont(new Font("Consolas", Font.PLAIN, 14));
-        JScrollPane objCodeScrollPane = new JScrollPane(objectCodeArea);
-        objCodeScrollPane.setBorder(new TitledBorder("Объектный код"));
-        objCodeScrollPane.setPreferredSize(new Dimension(WIDTH/2,HEIGHT/2));
-        panel.add(objCodeScrollPane);
-
-        JPanel tabs = new JPanel(new GridLayout(1,2,10,0));
+        JPanel tabsSymbols = new JPanel(new GridLayout(1,2,10,0));
         String[] symTabColumns = {"Имя", "Адрес"};
         symTabModel = new DefaultTableModel(symTabColumns, 0) {
              @Override
@@ -292,7 +287,7 @@ public class AssemblerGUI extends JFrame{
         JTable symTable = new JTable(symTabModel);
         JScrollPane symTabScrollPane = new JScrollPane(symTable);
         symTabScrollPane.setBorder(new TitledBorder("Таблица символических имен"));
-        tabs.add(symTabScrollPane);
+        tabsSymbols.add(symTabScrollPane);
 
         String[] meetTabColumns = {"Адрес", "Имя"};
         meetTabModel = new DefaultTableModel(meetTabColumns, 0) {
@@ -304,11 +299,11 @@ public class AssemblerGUI extends JFrame{
         JTable meetTable = new JTable(meetTabModel);
         JScrollPane meetTabScrollPane = new JScrollPane(meetTable);
         meetTabScrollPane.setBorder(new TitledBorder("Таблица встреченных имен"));
-        tabs.add(meetTabScrollPane);
-        tabs.setPreferredSize(new Dimension(WIDTH/2,HEIGHT/8));
-        panel.add(tabs);
+        tabsSymbols.add(meetTabScrollPane);
+        //tabs.setPreferredSize(new Dimension(WIDTH/2,HEIGHT/8));
+        panel.add(tabsSymbols);
 
-        String[] relocationTabColumn = {"Address"};
+        String[] relocationTabColumn = {"Адрес","Имя"};
         relocationTabModel = new DefaultTableModel(relocationTabColumn,0){
             @Override
             public  boolean isCellEditable(int row, int column){
@@ -319,8 +314,52 @@ public class AssemblerGUI extends JFrame{
         JScrollPane relocationTabScrollPane = new JScrollPane(relocationTable);
         
         relocationTabScrollPane.setBorder(new TitledBorder("Таблица перемещений"));
-        relocationTabScrollPane.setPreferredSize(new Dimension(WIDTH/2,HEIGHT/8));
+        //relocationTabScrollPane.setPreferredSize(new Dimension(WIDTH/2,HEIGHT/8));
         panel.add(relocationTabScrollPane);
+
+        JPanel tabsExternal = new JPanel(new GridLayout(1, 2,0,10));
+        String[] externalLinks = {"Имя","Адрес"};
+        externalLinksModel = new DefaultTableModel(externalLinks,0){
+            @Override
+            public boolean isCellEditable(int row, int column){
+                return false;
+            } 
+        };
+        JTable externalLinksTab = new JTable(externalLinksModel);
+        JScrollPane externalLinksTabScrollPane = new JScrollPane(externalLinksTab);
+        externalLinksTabScrollPane.setBorder(new TitledBorder("Внешние ссылки"));
+
+        String[] externalSymbols = {"Имя"};
+        externalSymbolsModel = new DefaultTableModel(externalSymbols,0){
+            @Override
+            public boolean isCellEditable(int row, int column){
+                return false;
+            } 
+        };
+        JTable externalSymbolsTab = new JTable(externalSymbolsModel);
+        JScrollPane externalSymbolsTabSrcollPane = new JScrollPane(externalSymbolsTab);
+        externalSymbolsTabSrcollPane.setBorder(new TitledBorder("Внешние символы"));
+
+        tabsExternal.add(externalLinksTabScrollPane);
+        tabsExternal.add(externalSymbolsTabSrcollPane);
+
+        panel.add(tabsExternal);
+
+        return panel;
+    }
+
+    private JPanel createColumn3(){
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(new TitledBorder("Результат"));
+
+        objectCodeArea = new JTextArea();
+        objectCodeArea.setEditable(false);
+        objectCodeArea.setFont(new Font("Consolas", Font.PLAIN, 14));
+        JScrollPane objCodeScrollPane = new JScrollPane(objectCodeArea);
+        objCodeScrollPane.setBorder(new TitledBorder("Объектный код"));
+        objCodeScrollPane.setPreferredSize(new Dimension(WIDTH/2,HEIGHT/2));
+        panel.add(objCodeScrollPane);
 
         errorsPassArea = new JTextArea();
         errorsPassArea.setEditable(false);
