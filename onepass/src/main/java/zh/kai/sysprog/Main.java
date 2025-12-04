@@ -16,7 +16,8 @@ public class Main {
         add r1 r2
     .save sta [.res]
         clr
-        jmp .loop 
+        jmp .loop
+        resb 42 
     .one byte 1
     .two byte 2
     .res word 0
