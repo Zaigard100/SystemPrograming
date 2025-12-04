@@ -22,6 +22,8 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 
 import zh.kai.sysprog.asm.Address;
@@ -58,6 +60,8 @@ public class AssemblerGUI extends JFrame{
         mainPanel.add(createColumn1());
         mainPanel.add(createColumn2());
 
+        initAsm();
+
         getContentPane().add(mainPanel, BorderLayout.CENTER);
         setResizable(false);
         pack();
@@ -75,6 +79,7 @@ public class AssemblerGUI extends JFrame{
 
         sourceCodeArea = new JTextArea(20, 30);
         sourceCodeArea.setText(Main.CODE.trim()); // Заполнение примером
+        sourceCodeArea.getDocument().addDocumentListener(new DataChange());
         Font font = new Font("Consolas", Font.PLAIN, 14);
         sourceCodeArea.setFont(font);
         JScrollPane sourceCodeScrollPane = new JScrollPane(sourceCodeArea);
@@ -90,7 +95,7 @@ public class AssemblerGUI extends JFrame{
         stepButton.addActionListener(new StepListener());
         fullButton.addActionListener(new FullListener());
 
-        asmButtons.add(initButton);
+        //asmButtons.add(initButton);
         asmButtons.add(stepButton);
         asmButtons.add(fullButton);
         //asmButtons.setPreferredSize(new Dimension(100,HEIGHT/2-2));
@@ -136,7 +141,13 @@ public class AssemblerGUI extends JFrame{
     private class InitListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
-            String code = sourceCodeArea.getText().trim();
+            initAsm();
+        }
+        
+    }
+
+    void initAsm(){
+        String code = sourceCodeArea.getText().trim();
             StringBuilder opcodeData = new StringBuilder();
             for (int i = 0; i < opcodeTableModel.getRowCount(); i++) {
                 String n = (String) opcodeTableModel.getValueAt(i, 0);
@@ -153,8 +164,6 @@ public class AssemblerGUI extends JFrame{
             symTabModel.setRowCount(0);
             meetTabModel.setRowCount(0);
             relocationTabModel.setRowCount(0);
-        }
-        
     }
 
     private class StepListener implements ActionListener {
@@ -196,8 +205,27 @@ public class AssemblerGUI extends JFrame{
         
     }
 
+    private class DataChange implements DocumentListener {
+
+        @Override
+        public void changedUpdate(DocumentEvent e) {
+        }
+
+        @Override
+        public void insertUpdate(DocumentEvent e) {
+            initAsm();
+        }
+
+        @Override
+        public void removeUpdate(DocumentEvent e) {
+            initAsm();
+        }
+
+    }
+
     private void updateData(){
         String obj = asm.toBin();
+        System.out.println("Update");
         Map<String,Address> sym = asm.getSymTab();
         Map<CodeLine,String> meet = asm.getMetLabels();
         objectCodeArea.setText(obj);

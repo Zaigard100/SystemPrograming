@@ -22,7 +22,7 @@ public class Main {
     .res word 0
     .hex byte X"ABCDEF45"
     .hello byte C"Hello"
-    end 101
+    end
     """;
 
     public final static String OPER = 

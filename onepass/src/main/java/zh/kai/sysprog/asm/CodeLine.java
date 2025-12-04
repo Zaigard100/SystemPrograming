@@ -94,6 +94,7 @@ public class CodeLine {
                         }
                         int len = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
                         if(len == -1) return asm.addError("Ожидется что аргумент число",this);
+                        if(len>= 256) return asm.addError("Размер команды ограничен 256",this);
                         objectCode = new short[len];
 
                         asm.setLc(lc+len);
@@ -106,6 +107,7 @@ public class CodeLine {
                         }
                         int len = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
                         if(len == -1) return asm.addError("Ожидется что аргумент число",this);
+                        if(len>= 256) return asm.addError("Размер команды ограничен 256",this);
                         objectCode = new short[len*Utils.WORD_LENGHT];
 
                         asm.setLc(lc+(len*Utils.WORD_LENGHT));
@@ -142,7 +144,8 @@ public class CodeLine {
                             if(data>=0 && data>Utils.MAX_BYTE) return asm.addError("Не корректные данные",this);
                             objectCode = new short[]{Utils.intToBin(data)[2]};
                         }
-
+                        
+                        if(objectCode.length >= 256) return asm.addError("Размер команды ограничен 256",this);
                         asm.setLc(lc + objectCode.length);
                     }
                 }
@@ -288,6 +291,9 @@ public class CodeLine {
     public boolean isLabelLine(){
         return label!=null && operationName==null;
     }
+    public boolean isRes(){
+        return "resb".equals(operationName) || "resw".equals(operationName);
+    }
 
     @Override
     public String toString() {
@@ -309,6 +315,9 @@ public class CodeLine {
         }
         if(isLabelLine()){
             return "";
+        }
+        if(isRes()){
+            return "T " +address.toString()+" "+objectCode.length+" ";
         }
         return "T " +address.toString()+" "+objectCode.length+" "+Utils.byteArrrayToString(objectCode);
         
