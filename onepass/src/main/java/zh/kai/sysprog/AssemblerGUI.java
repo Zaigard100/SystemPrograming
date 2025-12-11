@@ -193,6 +193,7 @@ public class AssemblerGUI extends JFrame{
 
         @Override
         public void actionPerformed(ActionEvent e) {
+            initAsm();
             if(asm!=null){
                 if(asm.passFull()){
                     updateData();

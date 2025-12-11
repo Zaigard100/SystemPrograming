@@ -7,6 +7,8 @@ import lombok.Setter;
 @Setter
 public class Address {
 
+    static final Address EMPTY = new Address(0xffffff);
+
     int address;
 
     public Address(int address) {

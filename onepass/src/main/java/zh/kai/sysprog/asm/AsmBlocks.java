@@ -3,6 +3,10 @@ package zh.kai.sysprog.asm;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -33,7 +37,15 @@ public class AsmBlocks {
         this.type = type;
     }
 
-    
+    public void init(){
+        codeLines = new ArrayList<>();
+        metLabels = new HashMap<>();
+        symTab = new HashMap<>();
+        relocationTable = new HashMap<>();
+        externalLinks = new HashMap<>();
+        externalSymbols = new ArrayList<>();
+        lc = -1;
+    }   
 
     public boolean addError(String string, CodeLine codeLine){return false;};
 

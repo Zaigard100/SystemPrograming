@@ -47,6 +47,7 @@ public class Main {
         sub r1 r7
         sta .res
     .hash byte X"EAFE6B6D99"  
+    end .s2
 
     end .prog
     """;

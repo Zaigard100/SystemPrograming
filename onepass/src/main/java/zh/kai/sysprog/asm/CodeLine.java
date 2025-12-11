@@ -95,7 +95,8 @@ public class CodeLine {
                         if(argument==null){
                             arg = 0;
                         }else{
-                            arg = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
+                            //arg = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
+                            arg = 0;
                         }
                         if(arg<start || arg>lc){
                             return asm.addError("Не допустимый аргумент", this);
@@ -327,8 +328,11 @@ public class CodeLine {
     public boolean isLabelLine(){
         return label!=null && operationName==null;
     }
-    public boolean isExt(){
-        return operationName.startsWith("ext");
+    public boolean isExtref(){
+        return operationName.equals("extref");
+    }
+    public boolean isExtdef(){
+        return operationName.equals("extdef");
     }
     public boolean isRes(){
         return "resb".equals(operationName) || "resw".equals(operationName);
@@ -345,23 +349,40 @@ public class CodeLine {
         return String.format("%-8s %s %s", l, o, a);
     }
 
-    public String toBin(){
+    public String toBin(AsmBlocks asm){
         if(isHead()){
-            return "H "+label+" "+Utils.byteArrrayToString(objectCode);
+            return "H "+label+" "+Utils.byteArrrayToString(objectCode)+"\n";
+        }
+        if(isSeg()){
+            return "H "+label+" "+Utils.byteArrrayToString(objectCode)+"\n";
         }
         if(isEnd()){
-            return "E "+ Utils.byteArrrayToString(objectCode);
+            return "E "+ Utils.byteArrrayToString(objectCode)+"\n";
         }
         if(isLabelLine()){
             return "";
         }
-        if(isExt()){
-            return "";
+        if(isExtref()){
+            StringBuilder sb = new StringBuilder();
+            String[] names = argument.trim().split("\\s+");
+            for(String s: names){
+                sb.append("R ").append(s).append("\n");
+            }
+            return sb.toString();
+        }
+        if(isExtdef()){
+            StringBuilder sb = new StringBuilder();
+            String[] names = argument.trim().split("\\s+");
+            for(String s: names){
+                sb.append("D ").append(s).append((asm.externalLinks.containsKey(s)?asm.externalLinks.get(s):Address.EMPTY)).append("\n");
+            }
+            
+            return sb.toString();
         }
         if(isRes()){
-            return "T " +address.toString()+" "+objectCode.length+" ";
+            return "T " +address.toString()+" "+objectCode.length+" "+"\n";
         }
-        return "T " +address.toString()+" "+objectCode.length+" "+Utils.byteArrrayToString(objectCode);
+        return "T " +address.toString()+" "+objectCode.length+" "+Utils.byteArrrayToString(objectCode)+"\n";
         
     }
     

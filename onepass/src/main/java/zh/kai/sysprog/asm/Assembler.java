@@ -42,19 +42,16 @@ public class Assembler extends AsmBlocks {
     public Assembler(String srcCode, String opCodeTab) {
         this(srcCode, opCodeTab, AddressationType.CHAINED);
     }
-
+    @Override
     public void init(){
+        super.init();
         errors = new ArrayList<>();
+        segments = new ArrayList<>();
         codeLines = parseCode(sourceCodeString);
         operationsTable = parseOpCode(operationCodeTableString);
-        metLabels = new HashMap<>();
-        symTab = new HashMap<>();
-        relocationTable = new HashMap<>();
-        externalLinks = new HashMap<>();
-        externalSymbols = new ArrayList<>();
-        segments = new ArrayList<>();
+
         linePos = 0;
-        lc = -1;
+        
     }
     
     public ArrayList<CodeLine> parseCode(String code){
@@ -136,6 +133,7 @@ public class Assembler extends AsmBlocks {
         CodeLine cL = codeLines.get(linePos);
         if(cL.isSeg()) {
             segments.add(new Segment(type,new ArrayList<>()));
+            segments.getLast().init();
             inSegment = true;
         }
         if(!inSegment){
@@ -159,7 +157,7 @@ public class Assembler extends AsmBlocks {
     public boolean passFull(){
         for(CodeLine cl:codeLines){
             if(cl.pass(this)){
-                if(!cl.isLabelLine()) System.out.println(cl.toBin());
+                if(!cl.isLabelLine()) System.out.println(cl.toBin(this));
             }else{
                 System.out.println();
                 for(String s:errors){
@@ -190,7 +188,6 @@ public class Assembler extends AsmBlocks {
         for(CodeLine cl: codeLines){
             if(cl.isPassed){
                 if(!cl.isLabelLine()) {
-                    if(cl.isExt()) continue;
                     if(cl.isEnd()){
                         for(Address a: relocationTable.keySet()){
                             sb
@@ -201,7 +198,7 @@ public class Assembler extends AsmBlocks {
                             .append("\n");
                         }
                     }
-                    sb.append(cl.toBin()).append("\n");       
+                    sb.append(cl.toBin(this));       
                 }
             }else{
                 break;
@@ -211,18 +208,17 @@ public class Assembler extends AsmBlocks {
             for(CodeLine cl: s.getCodeLines()){
                 if(cl.isPassed){
                     if(!cl.isLabelLine()) {
-                        if(cl.isExt()) continue;
                         if(cl.isEnd()){
-                            for(Address a: relocationTable.keySet()){
+                            for(Address a: s.getRelocationTable().keySet()){
                                 sb
                                 .append("M ")
                                 .append(a.toString())
                                 .append(" ")
-                                .append(relocationTable.get(a))
+                                .append(s.getRelocationTable().get(a))
                                 .append("\n");
                             }
                         }
-                        sb.append(cl.toBin()).append("\n");       
+                        sb.append(cl.toBin(s));       
                     }
                 }else{
                     break;
