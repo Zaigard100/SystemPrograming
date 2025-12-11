@@ -202,9 +202,9 @@ public class CodeLine {
                                             Address adr = asm.getSymTab().get(arg);
                                             int diff = adr.getAddress() - (address.getAddress() + len);
                                             short[] a = Utils.intToBin(diff);
-                                            objectCode = new short[]{(short) (code+1),a[0],a[1],a[2]};
+                                            objectCode = new short[]{(short) (code+2),a[0],a[1],a[2]};
                                         }else{
-                                            objectCode = new short[]{(short) (code+1),0xff,0xff,0xff};
+                                            objectCode = new short[]{(short) (code+2),0xff,0xff,0xff};
                                             asm.getMetLabels().put(this, arg);
                                         }
                                     }else{        
