@@ -228,9 +228,10 @@ public class AssemblerGUI extends JFrame{
 
     private void updateData(){
         String obj = asm.toBin();
-        System.out.println("Update");
         Map<String,Address> sym = asm.getSymTab();
         Map<CodeLine,String> meet = asm.getMetLabels();
+        Map<String,Address> extL = asm.getExternalLinks();
+        List<String> extS = asm.getExternalSymbols(); 
         objectCodeArea.setText(obj);
         symTabModel.setRowCount(0);
         for(String l: sym.keySet()){
@@ -243,6 +244,14 @@ public class AssemblerGUI extends JFrame{
         relocationTabModel.setRowCount(0);
         for(Address a: asm.getRelocationTable().keySet()){
             relocationTabModel.addRow(new Object[]{a,asm.getRelocationTable().get(a)});
+        }
+        externalLinksModel.setRowCount(0);
+        for(String l: extL.keySet()){
+            externalLinksModel.addRow(new Object[]{l,extL.get(l)});
+        }
+        externalSymbolsModel.setRowCount(0);
+        for(String l: extS){
+            externalSymbolsModel.addRow(new Object[]{l});
         }
     }
 

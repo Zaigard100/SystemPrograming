@@ -2,6 +2,7 @@ package zh.kai.sysprog.asm;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Optional;
 
 import javax.swing.text.Utilities;
@@ -56,6 +57,37 @@ public class CodeLine {
                         short[] binAddress = Utils.intToBin(lc);
                         objectCode = new short[]{binAddress[0],binAddress[1],binAddress[2],0xFF,0xFF,0xFF};
                         asm.setHeader(this);
+                    }
+                    case "segment" ->{
+                        asm.setBlockName(label);
+                        if(label == null){
+                            return asm.addError("Ожидется что у "+operationName+" будет имя",this);
+                        }
+                        
+                        if(argument == null){
+                            lc = 0;
+                        }else{
+                            lc = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
+                        }
+
+                        if(lc!=0) return asm.addError("Не допустимый адрес", this);
+                        
+                        asm.setLc(lc);
+                        address = new Address(lc);
+                        short[] binAddress = Utils.intToBin(lc);
+                        objectCode = new short[]{binAddress[0],binAddress[1],binAddress[2],0xFF,0xFF,0xFF};
+                        asm.setHeader(this);
+                    }
+                    case "extref"->{
+                        String[] names = argument.trim().split("\\s+");
+                        asm.externalSymbols.addAll(Arrays.asList(names));
+                        
+                    }
+                    case "extdef"->{
+                        String[] names = argument.trim().split("\\s+");
+                        for(String n: names){
+                            asm.externalLinks.put(n, null);
+                        }
                     }
                     case "end" -> {
                         int start = asm.getHeader().getAddress().getAddress();
@@ -254,7 +286,8 @@ public class CodeLine {
         }
 
         if(label!=null) {
-            if(!isHead()) asm.getSymTab().put(label, address);
+            if(!isHead() && !isSeg()) asm.getSymTab().put(label, address);
+            if(asm.externalLinks.containsKey(label)) asm.externalLinks.put(label, address);
             ArrayList<CodeLine> toRemove = new ArrayList<>();
             for(CodeLine cl:asm.getMetLabels().keySet()){
                
@@ -285,11 +318,17 @@ public class CodeLine {
     public boolean isHead(){
         return "start".equals(operationName);
     }
+    public boolean isSeg(){
+        return "segment".equals(operationName);
+    }
     public boolean isEnd(){
         return "end".equals(operationName);
     }
     public boolean isLabelLine(){
         return label!=null && operationName==null;
+    }
+    public boolean isExt(){
+        return operationName.startsWith("ext");
     }
     public boolean isRes(){
         return "resb".equals(operationName) || "resw".equals(operationName);
@@ -314,6 +353,9 @@ public class CodeLine {
             return "E "+ Utils.byteArrrayToString(objectCode);
         }
         if(isLabelLine()){
+            return "";
+        }
+        if(isExt()){
             return "";
         }
         if(isRes()){

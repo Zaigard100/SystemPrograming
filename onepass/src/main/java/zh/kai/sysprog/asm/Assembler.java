@@ -16,6 +16,9 @@ public class Assembler extends AsmBlocks {
     private String sourceCodeString;
     private String operationCodeTableString;
 
+    List<Segment> segments;
+    boolean inSegment = false;
+
     private List<String> errors;
 
     private boolean hasError = false;
@@ -47,6 +50,9 @@ public class Assembler extends AsmBlocks {
         metLabels = new HashMap<>();
         symTab = new HashMap<>();
         relocationTable = new HashMap<>();
+        externalLinks = new HashMap<>();
+        externalSymbols = new ArrayList<>();
+        segments = new ArrayList<>();
         linePos = 0;
         lc = -1;
     }
@@ -60,17 +66,21 @@ public class Assembler extends AsmBlocks {
             String[] split;
             if(line.startsWith(".")){
                 split = line.split("\\s+",3);
-                switch (split.length) {
-                    case 1 -> cls.add(new CodeLine(split[0].trim(), null, null));
-                    case 2 -> cls.add(new CodeLine(split[0].trim(), split[1].trim(), null));
-                    case 3 -> cls.add(new CodeLine(split[0].trim(), split[1].trim(), split[2].trim()));
-                }
+                CodeLine res = switch (split.length) {
+                    case 1 -> (new CodeLine(split[0].trim(), null, null));
+                    case 2 -> (new CodeLine(split[0].trim(), split[1].trim(), null));
+                    case 3 -> (new CodeLine(split[0].trim(), split[1].trim(), split[2].trim()));
+                    default -> null;
+                };
+                cls.add(res);
             }else{
                 split = line.split("\\s+",2);
-                switch (split.length) {
-                    case 1 -> cls.add(new CodeLine(null, split[0].trim(), null));
-                    case 2 -> cls.add(new CodeLine(null, split[0].trim(), split[1].trim()));
-                }
+                CodeLine res = switch (split.length) {
+                    case 1 -> (new CodeLine(null, split[0].trim(), null));
+                    case 2 -> (new CodeLine(null, split[0].trim(), split[1].trim()));
+                    default -> null;
+                };
+                cls.add(res);
             }
         }
     } catch (Exception e) {
@@ -122,8 +132,27 @@ public class Assembler extends AsmBlocks {
     }
 
     public boolean passStep(){
-        boolean a = codeLines.get(linePos).pass(this);
-        linePos++;
+        boolean a;
+        CodeLine cL = codeLines.get(linePos);
+        if(cL.isSeg()) {
+            segments.add(new Segment(type,new ArrayList<>()));
+            inSegment = true;
+        }
+        if(!inSegment){
+            a = cL.pass(this);
+            linePos++;
+        }else{
+            if(cL.isEnd()){
+                if(cL.getArgument().equals(segments.getLast().getBlockName())){
+                    inSegment = false;
+                }else{
+                    addError("Ожидался конец "+segments.getLast().getBlockName(), cL);
+                }
+            }
+            a = cL.pass(segments.getLast());
+            segments.getLast().getCodeLines().add(cL);
+            codeLines.remove(linePos);
+        }
         return a && !hasError;
     }
 
@@ -161,6 +190,7 @@ public class Assembler extends AsmBlocks {
         for(CodeLine cl: codeLines){
             if(cl.isPassed){
                 if(!cl.isLabelLine()) {
+                    if(cl.isExt()) continue;
                     if(cl.isEnd()){
                         for(Address a: relocationTable.keySet()){
                             sb
@@ -175,6 +205,28 @@ public class Assembler extends AsmBlocks {
                 }
             }else{
                 break;
+            }
+        }
+        for (Segment s : segments) {
+            for(CodeLine cl: s.getCodeLines()){
+                if(cl.isPassed){
+                    if(!cl.isLabelLine()) {
+                        if(cl.isExt()) continue;
+                        if(cl.isEnd()){
+                            for(Address a: relocationTable.keySet()){
+                                sb
+                                .append("M ")
+                                .append(a.toString())
+                                .append(" ")
+                                .append(relocationTable.get(a))
+                                .append("\n");
+                            }
+                        }
+                        sb.append(cl.toBin()).append("\n");       
+                    }
+                }else{
+                    break;
+                }
             }
         }
         return sb.toString();

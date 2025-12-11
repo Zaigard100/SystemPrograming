@@ -24,7 +24,31 @@ public class Main {
     .res word 0
     .hex byte X"ABCDEF45"
     .hello byte C"Hello"
-    end
+
+    .s1 segment
+    extref .hex
+    extdef .key
+        lda .hex
+        mov r1 r12
+        lda .key
+        add r1 r12
+        sta .key
+    .key word 42
+    end .s1
+
+    .s2 segment
+    extref .res
+    extdef .hash
+        clr
+        sta .res
+        lda .hash
+        mov r1 r7
+        mov 24
+        sub r1 r7
+        sta .res
+    .hash byte X"EAFE6B6D99"  
+
+    end .prog
     """;
 
     public final static String OPER = 
@@ -33,6 +57,7 @@ public class Main {
     lda 2 4
     sta 3 4
     add 4 2
+    sub 6 2
     jmp 8 4
     clr 5 1
     """;
