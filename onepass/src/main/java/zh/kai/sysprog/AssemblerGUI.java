@@ -30,6 +30,7 @@ import zh.kai.sysprog.asm.AddressationType;
 import zh.kai.sysprog.asm.Assembler;
 import zh.kai.sysprog.asm.CodeLine;
 import zh.kai.sysprog.asm.Operation;
+import zh.kai.sysprog.asm.Segment;
 
 public class AssemblerGUI extends JFrame{
 
@@ -174,7 +175,7 @@ public class AssemblerGUI extends JFrame{
         @Override
         public void actionPerformed(ActionEvent e) {
             if(asm!=null){
-                System.out.println(asm.getCodeLines().get(asm.getLinePos()));
+                if(!asm.getDataCode().hasNext()) return;
                 if(asm.passStep()){
                     updateData();
                 }else {
@@ -229,30 +230,52 @@ public class AssemblerGUI extends JFrame{
 
     private void updateData(){
         String obj = asm.toBin();
+        objectCodeArea.setText(obj);
+
         Map<String,Address> sym = asm.getSymTab();
         Map<CodeLine,String> meet = asm.getMetLabels();
         Map<String,Address> extL = asm.getExternalLinks();
         List<String> extS = asm.getExternalSymbols(); 
-        objectCodeArea.setText(obj);
         symTabModel.setRowCount(0);
         for(String l: sym.keySet()){
-            symTabModel.addRow(new Object[]{l,sym.get(l)});
+            symTabModel.addRow(new Object[]{l,sym.get(l),asm.getBlockName()});
         }
         meetTabModel.setRowCount(0);
         for(CodeLine cl: meet.keySet()){
-            meetTabModel.addRow(new Object[]{cl.getAddress(),meet.get(cl)});
+            meetTabModel.addRow(new Object[]{cl.getAddress(),meet.get(cl),asm.getBlockName()});
         }
         relocationTabModel.setRowCount(0);
         for(Address a: asm.getRelocationTable().keySet()){
-            relocationTabModel.addRow(new Object[]{a,asm.getRelocationTable().get(a)});
+            relocationTabModel.addRow(new Object[]{a,asm.getRelocationTable().get(a),asm.getBlockName()});
         }
         externalLinksModel.setRowCount(0);
         for(String l: extL.keySet()){
-            externalLinksModel.addRow(new Object[]{l,extL.get(l)});
+            externalLinksModel.addRow(new Object[]{l,extL.get(l),asm.getBlockName()});
         }
         externalSymbolsModel.setRowCount(0);
         for(String l: extS){
-            externalSymbolsModel.addRow(new Object[]{l});
+            externalSymbolsModel.addRow(new Object[]{l,asm.getBlockName()});
+        }
+        for(Segment s:asm.getSegments()){
+            sym = s.getSymTab();
+            meet = s.getMetLabels();
+            extL = s.getExternalLinks();
+            extS = s.getExternalSymbols(); 
+            for(String l: sym.keySet()){
+            symTabModel.addRow(new Object[]{l,sym.get(l),s.getBlockName()});
+            }
+            for(CodeLine cl: meet.keySet()){
+                meetTabModel.addRow(new Object[]{cl.getAddress(),meet.get(cl),s.getBlockName()});
+            }
+            for(Address a: s.getRelocationTable().keySet()){
+                relocationTabModel.addRow(new Object[]{a,s.getRelocationTable().get(a),s.getBlockName()});
+            }
+            for(String l: extL.keySet()){
+                externalLinksModel.addRow(new Object[]{l,extL.get(l),s.getBlockName()});
+            }
+            for(String l: extS){
+                externalSymbolsModel.addRow(new Object[]{l,s.getBlockName()});
+            }
         }
     }
 
@@ -287,7 +310,7 @@ public class AssemblerGUI extends JFrame{
         panel.setBorder(new TitledBorder("Таблицы"));
 
         JPanel tabsSymbols = new JPanel(new GridLayout(1,2,10,0));
-        String[] symTabColumns = {"Имя", "Адрес"};
+        String[] symTabColumns = {"Имя", "Адрес","Блок"};
         symTabModel = new DefaultTableModel(symTabColumns, 0) {
              @Override
             public boolean isCellEditable(int row, int column) {
@@ -299,7 +322,7 @@ public class AssemblerGUI extends JFrame{
         symTabScrollPane.setBorder(new TitledBorder("Таблица символических имен"));
         tabsSymbols.add(symTabScrollPane);
 
-        String[] meetTabColumns = {"Адрес", "Имя"};
+        String[] meetTabColumns = {"Адрес", "Имя","Блок"};
         meetTabModel = new DefaultTableModel(meetTabColumns, 0) {
              @Override
             public boolean isCellEditable(int row, int column) {
@@ -313,7 +336,7 @@ public class AssemblerGUI extends JFrame{
         //tabs.setPreferredSize(new Dimension(WIDTH/2,HEIGHT/8));
         panel.add(tabsSymbols);
 
-        String[] relocationTabColumn = {"Адрес","Имя"};
+        String[] relocationTabColumn = {"Адрес","Имя","Блок"};
         relocationTabModel = new DefaultTableModel(relocationTabColumn,0){
             @Override
             public  boolean isCellEditable(int row, int column){
@@ -328,7 +351,7 @@ public class AssemblerGUI extends JFrame{
         panel.add(relocationTabScrollPane);
 
         JPanel tabsExternal = new JPanel(new GridLayout(1, 2,0,10));
-        String[] externalLinks = {"Имя","Адрес"};
+        String[] externalLinks = {"Имя","Адрес","Блок"};
         externalLinksModel = new DefaultTableModel(externalLinks,0){
             @Override
             public boolean isCellEditable(int row, int column){
@@ -339,7 +362,7 @@ public class AssemblerGUI extends JFrame{
         JScrollPane externalLinksTabScrollPane = new JScrollPane(externalLinksTab);
         externalLinksTabScrollPane.setBorder(new TitledBorder("Внешние ссылки"));
 
-        String[] externalSymbols = {"Имя"};
+        String[] externalSymbols = {"Имя","Блок"};
         externalSymbolsModel = new DefaultTableModel(externalSymbols,0){
             @Override
             public boolean isCellEditable(int row, int column){

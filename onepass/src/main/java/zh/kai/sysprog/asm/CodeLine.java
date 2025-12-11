@@ -1,11 +1,8 @@
 package zh.kai.sysprog.asm;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Optional;
-
-import javax.swing.text.Utilities;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -235,9 +232,11 @@ public class CodeLine {
                                             Address adr = asm.getSymTab().get(arg);
                                             int diff = adr.getAddress() - (address.getAddress() + len);
                                             short[] a = Utils.intToBin(diff);
-                                            objectCode = new short[]{(short) (code+1),a[0],a[1],a[2]};
+                                            objectCode = new short[]{(short) (code+2),a[0],a[1],a[2]};
+                                        }else if(asm.getExternalSymbols().contains(arg)){
+                                            objectCode = new short[]{(short) (code+2),0x00,0x00,0x00};        
                                         }else{
-                                            objectCode = new short[]{(short) (code+1),0xff,0xff,0xff};
+                                            objectCode = new short[]{(short) (code+2),0xff,0xff,0xff};
                                             asm.getMetLabels().put(this, arg);
                                         }
                                     }else{        
@@ -246,7 +245,7 @@ public class CodeLine {
                                         if(data>=0 && data>Utils.MAX_BYTE) return asm.addError("Не корректные данные",this);
                                         int diff = address.getAddress() + len;
                                         short[] a = Utils.intToBin(diff);
-                                        objectCode = new short[]{(short) (code+1),a[0],a[1],a[2]};
+                                        objectCode = new short[]{(short) (code+2),a[0],a[1],a[2]};
                                     }
                                 }else{
                                     asm.addError("Ожидается ]", this);
@@ -260,6 +259,8 @@ public class CodeLine {
                                     Address adr = asm.getSymTab().get(argument);
                                     short[] a = adr.toBin();
                                     objectCode = new short[]{(short) (code+1),a[0],a[1],a[2]};
+                                }else  if(asm.getExternalSymbols().contains(argument)){
+                                    objectCode = new short[]{(short) (code+1),0x00,0x00,0x00};        
                                 }else{
                                     objectCode = new short[]{(short) (code+1),0xff,0xff,0xff};
                                     asm.getMetLabels().put(this, argument);
@@ -374,7 +375,9 @@ public class CodeLine {
             StringBuilder sb = new StringBuilder();
             String[] names = argument.trim().split("\\s+");
             for(String s: names){
-                sb.append("D ").append(s).append((asm.externalLinks.containsKey(s)?asm.externalLinks.get(s):Address.EMPTY)).append("\n");
+                sb
+                .append("D ").append(s).append(" ")
+                .append((asm.externalLinks.containsKey(s)?asm.externalLinks.get(s):Address.EMPTY)).append("\n");
             }
             
             return sb.toString();

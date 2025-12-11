@@ -1,8 +1,8 @@
 package zh.kai.sysprog.asm;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 
@@ -18,6 +18,8 @@ public class Assembler extends AsmBlocks {
 
     List<Segment> segments;
     boolean inSegment = false;
+
+    Iterator<CodeLine> dataCode;
 
     private List<String> errors;
 
@@ -47,9 +49,8 @@ public class Assembler extends AsmBlocks {
         super.init();
         errors = new ArrayList<>();
         segments = new ArrayList<>();
-        codeLines = parseCode(sourceCodeString);
+        dataCode = parseCode(sourceCodeString).iterator();
         operationsTable = parseOpCode(operationCodeTableString);
-
         linePos = 0;
         
     }
@@ -130,14 +131,15 @@ public class Assembler extends AsmBlocks {
 
     public boolean passStep(){
         boolean a;
-        CodeLine cL = codeLines.get(linePos);
+        CodeLine cL = dataCode.next();
         if(cL.isSeg()) {
-            segments.add(new Segment(type,new ArrayList<>()));
+            segments.add(new Segment(type,operationsTable,this));
             segments.getLast().init();
             inSegment = true;
         }
         if(!inSegment){
             a = cL.pass(this);
+            codeLines.add(cL);
             linePos++;
         }else{
             if(cL.isEnd()){
@@ -149,15 +151,16 @@ public class Assembler extends AsmBlocks {
             }
             a = cL.pass(segments.getLast());
             segments.getLast().getCodeLines().add(cL);
-            codeLines.remove(linePos);
+            linePos++;
         }
         return a && !hasError;
     }
 
     public boolean passFull(){
-        for(CodeLine cl:codeLines){
-            if(cl.pass(this)){
-                if(!cl.isLabelLine()) System.out.println(cl.toBin(this));
+        while(dataCode.hasNext()){
+            
+            if(passStep()){
+                
             }else{
                 System.out.println();
                 for(String s:errors){
@@ -165,6 +168,7 @@ public class Assembler extends AsmBlocks {
                 }
                 return false;
             }
+            
         }
         return !hasError;
     }
