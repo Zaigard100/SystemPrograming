@@ -6,10 +6,14 @@ import lombok.Setter;
 @Getter
 @Setter
 public class Address {
+    private boolean isEmpty = false;
+    public Address empty(){
+        isEmpty = true;
+        return this;
+    }
+    static final Address EMPTY = new Address(0xffffff).empty();
 
-    static final Address EMPTY = new Address(0xffffff);
-
-    int address;
+    int address; 
 
     public Address(int address) {
         this.address = address;

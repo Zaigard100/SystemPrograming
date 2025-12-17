@@ -2,6 +2,7 @@ package zh.kai.sysprog.asm;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map.Entry;
 import java.util.Optional;
 
 import lombok.Getter;
@@ -83,7 +84,7 @@ public class CodeLine {
                     case "extdef"->{
                         String[] names = argument.trim().split("\\s+");
                         for(String n: names){
-                            asm.externalLinks.put(n, null);
+                            asm.externalLinks.put(n, Address.EMPTY);
                         }
                     }
                     case "end" -> {
@@ -114,6 +115,9 @@ public class CodeLine {
 
                         if(!asm.getMetLabels().isEmpty()){
                             asm.addError("Встреченные имена небыли найдены полностью", this);
+                        }
+                        for(Entry<String,Address> a: asm.getExternalLinks().entrySet()){
+                            if(a.getValue().isEmpty()) asm.addError("Имя "+a.getKey()+" указанное как внешняя ссылка не была встречены", this);
                         }
                     }
                     case "resb" -> {
@@ -234,7 +238,7 @@ public class CodeLine {
                                             short[] a = Utils.intToBin(diff);
                                             objectCode = new short[]{(short) (code+2),a[0],a[1],a[2]};
                                         }else if(asm.getExternalSymbols().contains(arg)){
-                                            objectCode = new short[]{(short) (code+2),0x00,0x00,0x00};        
+                                            return asm.addError("Использование относительной адресации для внешних ссылок запрещена", this);     
                                         }else{
                                             objectCode = new short[]{(short) (code+2),0xff,0xff,0xff};
                                             asm.getMetLabels().put(this, arg);
@@ -259,13 +263,15 @@ public class CodeLine {
                                     Address adr = asm.getSymTab().get(argument);
                                     short[] a = adr.toBin();
                                     objectCode = new short[]{(short) (code+1),a[0],a[1],a[2]};
+                                    asm.relocationTable.put(address, "");                                    
                                 }else  if(asm.getExternalSymbols().contains(argument)){
-                                    objectCode = new short[]{(short) (code+1),0x00,0x00,0x00};        
+                                    objectCode = new short[]{(short) (code+1),0x00,0x00,0x00};   
+                                    asm.relocationTable.put(address, argument);            
                                 }else{
                                     objectCode = new short[]{(short) (code+1),0xff,0xff,0xff};
                                     asm.getMetLabels().put(this, argument);
+                                    asm.relocationTable.put(address, "");       
                                 }
-                                asm.relocationTable.put(address, "");
                             }else{
                                 int data = Utils.parseAndValidateArgument(argument, asm, this).orElse(-1);
                                 if(data == -1) return asm.addError("Ожидется что аргумент число",this);

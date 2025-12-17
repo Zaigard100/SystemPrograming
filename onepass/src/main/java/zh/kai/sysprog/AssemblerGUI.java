@@ -84,7 +84,7 @@ public class AssemblerGUI extends JFrame{
         sourceCodeArea = new JTextArea(20, 30);
         sourceCodeArea.setText(Main.CODE.trim()); // Заполнение примером
         sourceCodeArea.getDocument().addDocumentListener(new DataChange());
-        Font font = new Font("Consolas", Font.PLAIN, 14);
+        Font font = new Font("JetBrains Mono",Font.PLAIN,14);
         sourceCodeArea.setFont(font);
         JScrollPane sourceCodeScrollPane = new JScrollPane(sourceCodeArea);
         sourceCodeScrollPane.setPreferredSize(new Dimension(WIDTH/2, HEIGHT));
@@ -388,7 +388,9 @@ public class AssemblerGUI extends JFrame{
 
         objectCodeArea = new JTextArea();
         objectCodeArea.setEditable(false);
-        objectCodeArea.setFont(new Font("Consolas", Font.PLAIN, 14));
+
+        Font font = new Font("JetBrains Mono",Font.PLAIN,14);
+        objectCodeArea.setFont(font);
         JScrollPane objCodeScrollPane = new JScrollPane(objectCodeArea);
         objCodeScrollPane.setBorder(new TitledBorder("Объектный код"));
         objCodeScrollPane.setPreferredSize(new Dimension(WIDTH/2,HEIGHT/2));
